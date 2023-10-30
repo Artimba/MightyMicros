@@ -1,3 +1,8 @@
 opencv-python
 opencv-contrib-python
 numpy
+torch
+torchvision
+label-studio
+label-studio-ml
+tensorflow

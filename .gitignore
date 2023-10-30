@@ -161,3 +161,4 @@ cython_debug/
 
 mighty/
 data/*.mp4
+*.pt
