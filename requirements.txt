@@ -6,3 +6,4 @@ torchvision
 label-studio
 label-studio-ml
 tensorflow
+ultralytics
