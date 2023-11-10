@@ -31,7 +31,7 @@ from ultralytics import YOLO
 model = YOLO('runs/detect/train3/weights/best.pt')
 
 # Open the video file
-video_path = "data/20231017_123110.mp4"
+video_path = "data/20231017_120545.mp4"
 cap = cv2.VideoCapture(video_path)
 
 # Loop through the video frames
