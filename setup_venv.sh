@@ -17,3 +17,11 @@ if [ -f "requirements.txt" ]; then
 else
   echo "requirements.txt not found."
 fi
+
+if [ -f "setup.py" ]; then
+  echo "Installing local modules..."
+  pip install -e .
+else
+  echo "setup.py not found."
+fi
+

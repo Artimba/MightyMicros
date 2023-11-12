@@ -17,3 +17,10 @@ if exist "requirements.txt" (
 ) else (
     echo requirements.txt not found.
 )
+
+if exist "setup.py" (
+    echo Installing local modules...
+    pip install -e .
+) else (
+    echo setup.py not found.
+)
