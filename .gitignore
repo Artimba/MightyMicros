@@ -165,3 +165,4 @@ data/*.mp4
 converter/
 training/
 *.mp4
+.DS_Store
