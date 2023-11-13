@@ -1,2 +1,10 @@
-def function(x):
-    print("Success")
+from ultralytics import YOLO
+
+class Model(object):
+
+    def __init__(self, model_path: str):
+        self.model = YOLO(model_path)
+    
+    def run_detection(self, frame):
+        return self.model(frame)
+        

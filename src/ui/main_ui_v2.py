@@ -21,7 +21,7 @@ from PyQt5.QtMultimediaWidgets import *
 from PyQt5.QtMultimedia import *
 
 #classes
-from display_write_video_thread import Thread1
+from src.ui.display_write_video_thread import Thread1
 
 class Ui_MainWindow(object):
    
