@@ -21,8 +21,7 @@ class Thread1(QThread):
         Capture = cv2.VideoCapture(0) #get video feed
         
         # This is used over just a string for OS interoperability
-        # weights_path = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
-        weights_path = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'yolov8n.pt')
+        weights_path = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
 
         self.model = Model(weights_path)
         self.Fourcc = cv2.VideoWriter_fourcc(*'mp4v')
