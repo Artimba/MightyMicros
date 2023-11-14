@@ -92,7 +92,7 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.Thread1 = Thread1(self)
             self.Thread1.start()
         else: 
-            self.pushButton.setText("Start Recording")
+            self.ui.pushButton.setText("Start Recording")
             self.timer.stop() 
             self.Thread1.stop()
 
