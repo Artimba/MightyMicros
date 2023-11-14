@@ -12,7 +12,11 @@ from src.ui.display_write_video_thread import Thread1
 #https://www.youtube.com/watch?v=a6_5vkxLwAw&t=1485s
 #https://stackoverflow.com/questions/62279279/how-to-record-the-video-from-a-webcam-in-a-pyqt5-gui-using-opencv-and-qthread
 
+
+
+
 class MightyMicros(QtWidgets.QMainWindow):
+
     
     def __init__(self):
         super().__init__()
@@ -20,6 +24,8 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
 
         # Change/add any property about ui here
+
+        
         
         # region [ Widgets ]
         # region [ Add video widget]
@@ -55,6 +61,12 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.slider_2.setObjectName("slider2")
         self.ui.horizontalLayout_14.insertWidget(2, self.slider_2)
         # endregion
+
+        # region [ Edit TextEdit Widget]
+        self.ui.output1.setReadOnly(True)
+        self.ui.output2.setReadOnly(True)
+
+        # endregion
         # endregion
         
         self.ui.tabWidget.setCurrentIndex(0)
@@ -81,7 +93,10 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.pushButton_5.setText(_translate("MainWindow", "Play"))
         # endregion
         
-        
+        # region [ Add Widgets ]
+
+        # endregion
+   
     # region [ Methods ]
     def ImageUpdateSlot(self, Image): 
         self.ui.label_3.setPixmap(QtGui.QPixmap.fromImage(Image)) 
@@ -95,10 +110,14 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.ThreadActive = True
             self.Thread1 = Thread1(self)
             self.Thread1.start()
+            #output1_text = output1_text + "\nRecording Started"
+            self.ui.output1.append("\nRecording Started")
         else: 
             self.ui.pushButton.setText("Start Recording")
             self.timer.stop() 
             self.Thread1.stop()
+            #output1_text = output1_text + "\nRecording Stopped"
+            self.ui.output1.append("\nRecording Stopped")
 
             #load video to media player
             QtTest.QTest.qWait(1000)
