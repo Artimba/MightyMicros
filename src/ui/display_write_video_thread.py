@@ -1,10 +1,13 @@
-import sys 
+import os
 from PyQt5.QtGui import * 
 from PyQt5.QtWidgets import * 
 from PyQt5.QtCore import * 
 from PyQt5.QtMultimediaWidgets import *
 from PyQt5.QtMultimedia import *
 import cv2
+
+from src.pipeline.detection import Model
+from src import PROJECT_ROOT
 
 #class for a thread to display video and write video to a file 
 class Thread1(QThread):
@@ -16,21 +19,31 @@ class Thread1(QThread):
 
     def run(self):
         Capture = cv2.VideoCapture(0) #get video feed
+        
+        # This is used over just a string for OS interoperability
+        # weights_path = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
+        weights_path = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'yolov8n.pt')
 
-     
+        self.model = Model(weights_path)
         self.Fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         self.Output = cv2.VideoWriter('video_recording.mp4', self.Fourcc, 20, (640, 480))
         #self.Capture = cv2.VideoCapture(0)
 
-        while True: 
+        while self.ThreadActive: 
             ret, frame = Capture.read() #get frame from video feed
             if ret: 
-                Image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #get color image from feed
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #get color image from feed
                 frame = cv2.resize(frame, (640, 480))
+                
+        
+                results = self.model.predict(frame)
+                
+                annotated_frame = results[0].plot(labels=False, masks=False)
+                
                 #FlippedImage = cv2.flip(Image, 1) #flip video on vertical axis 
-                ConvertToQtFormat = QImage(Image.data, Image.shape[1], Image.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
-                Pic = ConvertToQtFormat.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
-                self.ImageUpdate.emit(Pic) #emit the thread: send to main window 
+                qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
+                qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
+                self.ImageUpdate.emit(qt_frame) #emit the thread: send to main window 
 
                 if self.ThreadActive: 
                     self.Output.write(frame)
@@ -39,3 +52,4 @@ class Thread1(QThread):
         self.ThreadActive = False
         self.Output.release()
         self.quit()
+        

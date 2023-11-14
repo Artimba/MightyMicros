@@ -24,9 +24,6 @@ from PyQt5.QtMultimedia import *
 from src.ui.display_write_video_thread import Thread1
 
 class Ui_MainWindow(object):
-   
-
-
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1363, 863)

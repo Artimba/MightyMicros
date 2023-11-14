@@ -5,6 +5,6 @@ class Model(object):
     def __init__(self, model_path: str):
         self.model = YOLO(model_path)
     
-    def run_detection(self, frame):
+    def predict(self, frame):
         return self.model(frame)
         
