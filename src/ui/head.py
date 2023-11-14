@@ -8,6 +8,10 @@ import sys
 from src.ui.main_ui import Ui_MainWindow
 from src.ui.display_write_video_thread import Thread1
 
+#sources: 
+#https://www.youtube.com/watch?v=a6_5vkxLwAw&t=1485s
+#https://stackoverflow.com/questions/62279279/how-to-record-the-video-from-a-webcam-in-a-pyqt5-gui-using-opencv-and-qthread
+
 class MightyMicros(QtWidgets.QMainWindow):
     
     def __init__(self):
@@ -92,7 +96,7 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.Thread1 = Thread1(self)
             self.Thread1.start()
         else: 
-            self.pushButton.setText("Start Recording")
+            self.ui.pushButton.setText("Start Recording")
             self.timer.stop() 
             self.Thread1.stop()
 
