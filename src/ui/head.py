@@ -26,8 +26,15 @@ class MightyMicros(QtWidgets.QMainWindow):
 
         # Change/add any property about ui here
         self.cameraNumber = 1
+        self.ui.pushButton_2.setEnabled(False)
         
         # region [ Widgets ]
+
+        # region [Add combo box widget] 
+        self.videoCombo = QtWidgets.QComboBox(self.ui.frame_4)
+        self.ui.horizontalLayout_12.addWidget(self.videoCombo)
+
+        # endregion
         # region [ Add video widget]
         self.mediaPlayer = QMediaPlayer(self.ui.frame_5, QMediaPlayer.VideoSurface)
         self.videoWidget = QVideoWidget()
@@ -36,6 +43,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         sizePolicy.setVerticalStretch(0)
         self.mediaPlayer.setObjectName("media_player")
         self.ui.horizontalLayout_13.insertWidget(0, self.videoWidget)
+
         # endregion
 
         
@@ -89,6 +97,8 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.mediaPlayer.stateChanged.connect(self.mediaStateChange)
         self.mediaPlayer.positionChanged.connect(self.positionChanged)
         self.mediaPlayer.durationChanged.connect(self.durationChanged)
+
+        self.videoCombo.currentTextChanged.connect(self.comboBoxChanged)
         # endregion
         
         # region [ Translation ]
@@ -97,9 +107,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.pushButton_5.setText(_translate("MainWindow", "Play"))
         # endregion
         
-        # region [ Add Widgets ]
-
-        # endregion
+     
    
     # region [ Methods ]
     def ImageUpdateSlot(self, Image): 
@@ -123,10 +131,11 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.timer.stop() 
             self.Thread1.stop()
             self.ui.output1.append("\nRecording Video "+str(self.cameraNumber)+" Stopped")
+            self.videoCombo.addItem('video_recording'+str(self.cameraNumber)+'.mp4')
             self.cameraNumber += 1
 
             #load video to media player
-            QtTest.QTest.qWait(1000)
+            
             # TODO: Hard-coded paths are bad for maintainability. Use relative path instead (see what I did inside display_write_video_thread), or prompt for file path. See https://stackoverflow.com/questions/7165749/open-file-dialog-in-pyqt
             #filename = 'video_recording.mp4'
             #self.mediaPlayer.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(filename)))
@@ -154,6 +163,14 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.mediaPlayer.pause()
         else: 
             self.mediaPlayer.play()
+    
+    #this isn't working
+    def comboBoxChanged(self, value): 
+        QtTest.QTest.qWait(1000)
+        filename = str(value) #need to see what this looks like, print it to terminal
+        self.mediaPlayer.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(filename)))
+        self.ui.pushButton_2.setEnabled(True)
+
     
     def closeEvent(self, event: QtGui.QCloseEvent):
         """This method handles any cleanup when the application is about to quit.

@@ -30,7 +30,7 @@ class Thread1(QThread):
 
         #self.Capture = cv2.VideoCapture(0)
 
-        while True: 
+        while self.ThreadActive: 
             ret, frame = Capture.read() #get frame from video feed
             if ret: 
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #get color image from feed
@@ -40,6 +40,8 @@ class Thread1(QThread):
                 results = self.model.predict(frame)
                 
                 annotated_frame = results[0].plot(labels=False, masks=False)
+
+            
                 
                 #FlippedImage = cv2.flip(Image, 1) #flip video on vertical axis 
                 qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
@@ -47,6 +49,7 @@ class Thread1(QThread):
                 self.ImageUpdate.emit(qt_frame) #emit the thread: send to main window 
 
                 if self.ThreadActive: 
+                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                     self.Output.write(frame)
 
     def stop(self):
