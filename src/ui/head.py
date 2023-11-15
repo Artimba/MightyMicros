@@ -110,25 +110,27 @@ class MightyMicros(QtWidgets.QMainWindow):
         if self.timer.isActive() == False:
             self.ui.pushButton.setText("Stop Recording")  
             self.timer.start() #start the timer
+
             #start writing the video
             self.ThreadActive = True
-            self.Thread1 = Thread1(self)
+            self.Thread1 = Thread1(self.cameraNumber, self)
+            
             self.Thread1.start()
-            #output1_text = output1_text + "\nRecording Started"
-            self.ui.output1.append("\nRecording Started")
+            self.ui.output1.append("\nRecording Video "+str(self.cameraNumber)+" Started")
+            
         else: 
             self.ui.pushButton.setText("Start Recording")
             self.timer.stop() 
             self.Thread1.stop()
-            #output1_text = output1_text + "\nRecording Stopped"
-            self.ui.output1.append("\nRecording Stopped")
+            self.ui.output1.append("\nRecording Video "+str(self.cameraNumber)+" Stopped")
+            self.cameraNumber += 1
 
             #load video to media player
             QtTest.QTest.qWait(1000)
             # TODO: Hard-coded paths are bad for maintainability. Use relative path instead (see what I did inside display_write_video_thread), or prompt for file path. See https://stackoverflow.com/questions/7165749/open-file-dialog-in-pyqt
-            filename = '/Users/adarekar/Desktop/MightyMicros/video_recording.mp4'
-            self.mediaPlayer.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(filename)))
-            self.ui.pushButton_2.setEnabled(True)
+            #filename = 'video_recording.mp4'
+            #self.mediaPlayer.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(filename)))
+            #self.ui.pushButton_2.setEnabled(True)
 
     #function to change button icon 
     def mediaStateChange(self, state): 
