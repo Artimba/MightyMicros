@@ -28,7 +28,7 @@ class Thread1(QThread):
         self.Output = cv2.VideoWriter('video_recording.mp4', self.Fourcc, 20, (640, 480))
         #self.Capture = cv2.VideoCapture(0)
 
-        while self.ThreadActive: 
+        while True: 
             ret, frame = Capture.read() #get frame from video feed
             if ret: 
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #get color image from feed
