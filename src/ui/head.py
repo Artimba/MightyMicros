@@ -25,7 +25,6 @@ class MightyMicros(QtWidgets.QMainWindow):
         
 
         # Change/add any property about ui here
-
         
         
         # region [ Widgets ]
@@ -39,7 +38,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.horizontalLayout_13.insertWidget(0, self.videoWidget)
         # endregion
 
-        self.num_video = 1 #variable to hold number of videos
+        
         
         # region [ Add slider 1 ]
         self.slider_1 = QtWidgets.QSlider(QtCore.Qt.Horizontal, self.ui.frame_6)
@@ -80,7 +79,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         self.ui.pushButton.clicked.connect(self.ClickBTN)
         
-        self.Thread1 = Thread1()
+        self.Thread1 = Thread1(1)
         self.Thread1.start()
         self.Thread1.ImageUpdate.connect(self.ImageUpdateSlot)
         
@@ -113,7 +112,7 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.timer.start() #start the timer
             #start writing the video
             self.ThreadActive = True
-            self.Thread1 = Thread1(self)
+            self.Thread1 = Thread1(self, MightyMicros())
             self.Thread1.start()
             #output1_text = output1_text + "\nRecording Started"
             self.ui.output1.append("\nRecording Started")
@@ -127,8 +126,7 @@ class MightyMicros(QtWidgets.QMainWindow):
             #load video to media player
             QtTest.QTest.qWait(1000)
             # TODO: Hard-coded paths are bad for maintainability. Use relative path instead (see what I did inside display_write_video_thread), or prompt for file path. See https://stackoverflow.com/questions/7165749/open-file-dialog-in-pyqt
-            filename = '/Users/adarekar/Desktop/MightyMicros/video_recording'+str(self.num_video)+'.mp4'
-            self.num_video += 1
+            filename = '/Users/adarekar/Desktop/MightyMicros/video_recording.mp4'
             self.mediaPlayer.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(filename)))
             self.ui.pushButton_2.setEnabled(True)
 
