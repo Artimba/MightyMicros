@@ -13,8 +13,9 @@ from src import PROJECT_ROOT
 class Thread1(QThread):
     ImageUpdate = pyqtSignal(QImage)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__()
+    def __init__(self, cameraNumber: int, parent = None):
+        super(Thread1, self).__init__(parent)
+        self.cameraNumber = cameraNumber
         self.ThreadActive = True #- see if commenting this out works
 
     def run(self):
@@ -25,7 +26,8 @@ class Thread1(QThread):
 
         self.model = Model(weights_path)
         self.Fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        self.Output = cv2.VideoWriter('video_recording.mp4', self.Fourcc, 20, (640, 480))
+        self.Output = cv2.VideoWriter('video_recording'+str(self.cameraNumber)+'.mp4', self.Fourcc, 20, (640, 480))
+        
         #self.Capture = cv2.VideoCapture(0)
 
         while True: 

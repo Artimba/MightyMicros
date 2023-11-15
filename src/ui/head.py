@@ -25,7 +25,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         
 
         # Change/add any property about ui here
-        
+        self.cameraNumber = 1
         
         # region [ Widgets ]
         # region [ Add video widget]
@@ -79,7 +79,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         self.ui.pushButton.clicked.connect(self.ClickBTN)
         
-        self.Thread1 = Thread1()
+        self.Thread1 = Thread1(self.cameraNumber)
         self.Thread1.start()
         self.Thread1.ImageUpdate.connect(self.ImageUpdateSlot)
         
@@ -112,7 +112,7 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.timer.start() #start the timer
             #start writing the video
             self.ThreadActive = True
-            self.Thread1 = Thread1(self, MightyMicros())
+            self.Thread1 = Thread1(self)
             self.Thread1.start()
             #output1_text = output1_text + "\nRecording Started"
             self.ui.output1.append("\nRecording Started")
