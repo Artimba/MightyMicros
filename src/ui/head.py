@@ -79,7 +79,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         self.ui.pushButton.clicked.connect(self.ClickBTN)
         
-        self.Thread1 = Thread1(1)
+        self.Thread1 = Thread1()
         self.Thread1.start()
         self.Thread1.ImageUpdate.connect(self.ImageUpdateSlot)
         
