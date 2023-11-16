@@ -4,6 +4,7 @@ from PyQt5 import QtTest, QtGui
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 import sys
+import os
 
 from src.ui.main_ui import Ui_MainWindow
 from src.ui.display_write_video_thread import Thread1
@@ -168,7 +169,7 @@ class MightyMicros(QtWidgets.QMainWindow):
     def comboBoxChanged(self, value): 
         QtTest.QTest.qWait(1000)
         filename = str(value) #need to see what this looks like, print it to terminal
-        self.mediaPlayer.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(filename)))
+        self.mediaPlayer.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(os.getcwd()+'/'+str(filename))))
         self.ui.pushButton_2.setEnabled(True)
 
     

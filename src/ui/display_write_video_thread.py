@@ -9,6 +9,7 @@ import cv2
 from src.pipeline.detection import Model
 from src import PROJECT_ROOT
 
+
 #class for a thread to display video and write video to a file 
 class Thread1(QThread):
     ImageUpdate = pyqtSignal(QImage)
@@ -45,6 +46,8 @@ class Thread1(QThread):
                 
                 #FlippedImage = cv2.flip(Image, 1) #flip video on vertical axis 
                 qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
+                #qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
+                
                 qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
                 self.ImageUpdate.emit(qt_frame) #emit the thread: send to main window 
 
