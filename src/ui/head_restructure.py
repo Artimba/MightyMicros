@@ -5,9 +5,10 @@ from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 import sys
 import os
+import cv2
 
 from src.ui.main_ui import Ui_MainWindow
-from src.ui.display_write_video_thread import Thread1, Thread2
+#from src.ui.display_write_video_thread import Thread1
 
 #sources: 
 #https://www.youtube.com/watch?v=a6_5vkxLwAw&t=1485s
@@ -26,8 +27,16 @@ class MightyMicros(QtWidgets.QMainWindow):
         
 
         # Change/add any property about ui here
-        self.videoNumber = 1
+        self.cameraNumber = 1
         self.ui.pushButton_2.setEnabled(False)
+
+        # region [ Set up camera display ]
+        self.camera1 = cv2.VideoCapture(0)
+        self.timer1 = QtCore.QTimer(self)
+        self.timer1.timeout.connect(self.updateFrame)
+        self.timer1.start(30)
+        # endregion
+
         
         # region [ Widgets ]
 
@@ -36,7 +45,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.horizontalLayout_12.addWidget(self.videoCombo)
 
         # endregion
-        # region [ Add video widgets]
+        # region [ Add video widget]
         self.mediaPlayer = QMediaPlayer(self.ui.frame_5, QMediaPlayer.VideoSurface)
         self.videoWidget = QVideoWidget()
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
@@ -88,14 +97,10 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         self.ui.pushButton.clicked.connect(self.ClickBTN)
         
-        self.Thread1 = Thread1(self.videoNumber, False)
-        self.Thread1.start()
-        self.Thread1.ImageUpdate.connect(self.ImageUpdateSlot1)
+        #self.Thread1 = Thread1(self.cameraNumber)
+        #self.Thread1.start()
+        #self.Thread1.ImageUpdate.connect(self.ImageUpdateSlot)
         
-        self.Thread2 = Thread2(self.videoNumber, False)
-        self.Thread2.start()
-        self.Thread2.ImageUpdate.connect(self.ImageUpdateSlot2)
-
         self.ui.pushButton_2.clicked.connect(self.playVideo)
         
         self.mediaPlayer.setVideoOutput(self.videoWidget)
@@ -110,44 +115,40 @@ class MightyMicros(QtWidgets.QMainWindow):
         _translate = QtCore.QCoreApplication.translate
         self.ui.pushButton_2.setText(_translate("MainWindow", "Play"))
         self.ui.pushButton_5.setText(_translate("MainWindow", "Play"))
+        self.ui.label_4.setText(_translate("MainWindow", "Hello"))
         self.ui.label_3.setText(_translate("MainWindow", ""))
-        self.ui.label_4.setText(_translate("MainWindow", ""))
         # endregion
         
      
    
     # region [ Methods ]
-    def ImageUpdateSlot1(self, Image): 
+    def ImageUpdateSlot(self, Image): 
         self.ui.label_3.setPixmap(QtGui.QPixmap.fromImage(Image)) 
 
-    def ImageUpdateSlot2(self, Image): 
-        self.ui.label_4.setPixmap(QtGui.QPixmap.fromImage(Image)) 
-
     def ClickBTN(self):
-        #disable start button so user can't click it
+        
         if self.timer.isActive() == False:
             self.ui.pushButton.setText("Stop Recording")  
             self.timer.start() #start the timer
 
+
             #start writing the video
-            self.ThreadActive = True
-            self.Thread1 = Thread1(self.videoNumber, True, self)
-            self.Thread1.start()
+            #self.ThreadActive = True
+            #self.Thread1 = Thread1(self.cameraNumber, self)
+            
+            #self.Thread1.start()
 
-            self.Thread2 = Thread2(self.videoNumber, True, self)
-            self.Thread2.start() 
+    
 
-            self.ui.output1.append("\nRecording Video "+str(self.videoNumber)+" Started")
+            self.ui.output1.append("\nStarted Recording Video "+str(self.cameraNumber))
             
         else: 
             self.ui.pushButton.setText("Start Recording")
             self.timer.stop() 
-            self.Thread1.stop()
-            self.Thread2.stop()
-
-            self.ui.output1.append("\nRecording Video "+str(self.videoNumber)+" Stopped")
-            self.videoCombo.addItem('Video ' + str(self.videoNumber))
-            self.videoNumber += 1
+            #self.Thread1.stop()
+            self.ui.output1.append("\nStopped Recording Video "+str(self.cameraNumber))
+            self.videoCombo.addItem('video_recording'+str(self.cameraNumber)+'.mp4')
+            self.cameraNumber += 1
 
             #load video to media player
             
@@ -179,12 +180,39 @@ class MightyMicros(QtWidgets.QMainWindow):
         else: 
             self.mediaPlayer.play()
     
-    #need to change this to be able to play both videos, also need to code up the other play button
+    #this isn't working
     def comboBoxChanged(self, value): 
         QtTest.QTest.qWait(1000)
-        filename = value
+        filename = str(value) #need to see what this looks like, print it to terminal
         self.mediaPlayer.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(os.getcwd()+'/'+str(filename))))
         self.ui.pushButton_2.setEnabled(True)
+
+    def updateFrame(self):
+        ret, frame = self.camera1.read() #get frame from video feed
+        
+        if ret: 
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #get color image from feed
+            frame = cv2.resize(frame, (640, 480))
+                
+        
+                #results = self.model.predict(frame)
+                
+                #annotated_frame = results[0].plot(labels=False, masks=False)
+
+            
+                
+            qt_frame = QtGui.QImage(frame.data, frame.shape[1], frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
+            #qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
+            
+            qt_frame = qt_frame.scaled(640, 480, QtCore.Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
+
+            self.ImageUpdateSlot(qt_frame)
+
+
+            
+
+            #self.ImageUpdate.emit(qt_frame)
+
 
     
     def closeEvent(self, event: QtGui.QCloseEvent):
@@ -193,15 +221,10 @@ class MightyMicros(QtWidgets.QMainWindow):
         i.e closing files, releasing threads. 
         """
         
-        if self.Thread1.isRunning():
-            print("Stopping VideoCapture Thread")
-            self.Thread1.stop()
-            self.Thread1.wait()
-
-        if self.Thread2.isRunning(): 
-            print("Stopping VideoCapture Thread")
-            self.Thread2.stop()
-            self.Thread2.wait()
+        #if self.Thread1.isRunning():
+            #print("Stopping VideoCapture Thread")
+            #self.Thread1.stop()
+            #self.Thread1.wait()
         
         print("Closing application")
         # Pass the event back to the normal handler to close the window.
