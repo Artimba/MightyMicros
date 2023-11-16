@@ -8,7 +8,7 @@ import os
 import cv2
 
 from src.ui.main_ui import Ui_MainWindow
-from src.ui.display_write_video_thread import Thread1
+#from src.ui.display_write_video_thread import Thread1
 
 #sources: 
 #https://www.youtube.com/watch?v=a6_5vkxLwAw&t=1485s
@@ -133,16 +133,19 @@ class MightyMicros(QtWidgets.QMainWindow):
 
 
             #start writing the video
-            self.ThreadActive = True
-            self.Thread1 = Thread1(self.cameraNumber, self)
+            #self.ThreadActive = True
+            #self.Thread1 = Thread1(self.cameraNumber, self)
             
-            self.Thread1.start()
+            #self.Thread1.start()
+
+    
+
             self.ui.output1.append("\nStarted Recording Video "+str(self.cameraNumber))
             
         else: 
             self.ui.pushButton.setText("Start Recording")
             self.timer.stop() 
-            self.Thread1.stop()
+            #self.Thread1.stop()
             self.ui.output1.append("\nStopped Recording Video "+str(self.cameraNumber))
             self.videoCombo.addItem('video_recording'+str(self.cameraNumber)+'.mp4')
             self.cameraNumber += 1
@@ -205,6 +208,7 @@ class MightyMicros(QtWidgets.QMainWindow):
 
             self.ImageUpdateSlot(qt_frame)
 
+
             
 
             #self.ImageUpdate.emit(qt_frame)
@@ -217,10 +221,10 @@ class MightyMicros(QtWidgets.QMainWindow):
         i.e closing files, releasing threads. 
         """
         
-        if self.Thread1.isRunning():
-            print("Stopping VideoCapture Thread")
-            self.Thread1.stop()
-            self.Thread1.wait()
+        #if self.Thread1.isRunning():
+            #print("Stopping VideoCapture Thread")
+            #self.Thread1.stop()
+            #self.Thread1.wait()
         
         print("Closing application")
         # Pass the event back to the normal handler to close the window.
