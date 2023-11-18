@@ -80,7 +80,7 @@ class Thread2(QThread):
 
         self.model = Model(weights_path)
         self.Fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        self.Output = cv2.VideoWriter('video_recording_2_'+str(self.videoNumber)+'.mp4', self.Fourcc, 20, (640, 480))
+        self.Output = cv2.VideoWriter('video_recording_2_'+str(self.videoNumber)+'.mp4', self.Fourcc, 15, (640, 480))
 
         #self.Capture = cv2.VideoCapture(0)
 

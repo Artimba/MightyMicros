@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1363</width>
-    <height>776</height>
+    <height>787</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -39,7 +39,7 @@
        <item>
         <widget class="QTabWidget" name="tabWidget">
          <property name="currentIndex">
-          <number>0</number>
+          <number>1</number>
          </property>
          <widget class="QWidget" name="RecordTab">
           <attribute name="title">
@@ -370,6 +370,12 @@
               </item>
               <item>
                <widget class="QFrame" name="frame_5">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="frameShape">
                  <enum>QFrame::StyledPanel</enum>
                 </property>
@@ -442,52 +448,35 @@
              <property name="frameShadow">
               <enum>QFrame::Raised</enum>
              </property>
-             <widget class="QFrame" name="ConFrame_2">
+             <widget class="QLabel" name="ConTitle_2">
               <property name="geometry">
                <rect>
-                <x>0</x>
-                <y>21</y>
-                <width>200</width>
-                <height>781</height>
+                <x>10</x>
+                <y>10</y>
+                <width>174</width>
+                <height>24</height>
                </rect>
               </property>
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
+              <property name="font">
+               <font>
+                <pointsize>20</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
               </property>
-              <property name="minimumSize">
-               <size>
-                <width>200</width>
-                <height>0</height>
-               </size>
+              <property name="text">
+               <string>Console</string>
               </property>
-              <property name="frameShape">
-               <enum>QFrame::StyledPanel</enum>
+             </widget>
+             <widget class="QGraphicsView" name="graphicsView_2">
+              <property name="geometry">
+               <rect>
+                <x>10</x>
+                <y>40</y>
+                <width>231</width>
+                <height>581</height>
+               </rect>
               </property>
-              <property name="frameShadow">
-               <enum>QFrame::Raised</enum>
-              </property>
-              <layout class="QVBoxLayout" name="verticalLayout_7">
-               <item>
-                <widget class="QLabel" name="ConTitle_2">
-                 <property name="font">
-                  <font>
-                   <pointsize>20</pointsize>
-                   <weight>75</weight>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>Console</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QGraphicsView" name="graphicsView_2"/>
-               </item>
-              </layout>
              </widget>
             </widget>
            </item>
@@ -506,7 +495,7 @@
      <x>0</x>
      <y>0</y>
      <width>1363</width>
-     <height>21</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

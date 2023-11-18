@@ -29,7 +29,8 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.videoNumber = 1
         self.ui.pushButton_2.setEnabled(False)
         self.ui.pushButton_5.setEnabled(False)
-        
+        self.ui.frame_5.setMinimumSize(QtCore.QSize(440, 330))
+
         # region [ Widgets ]
 
         # region [Add combo box widget] 
