@@ -7,7 +7,7 @@ import sys
 import os
 import cv2
 
-from src.ui.main_ui import Ui_MainWindow
+from src.ui.main_ui_old import Ui_MainWindow
 #from src.ui.display_write_video_thread import Thread1
 
 #sources: 

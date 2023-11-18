@@ -28,6 +28,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         # Change/add any property about ui here
         self.videoNumber = 1
         self.ui.pushButton_2.setEnabled(False)
+        self.ui.pushButton_5.setEnabled(False)
         
         # region [ Widgets ]
 
@@ -36,18 +37,53 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.horizontalLayout_12.addWidget(self.videoCombo)
 
         # endregion
-        # region [ Add video widgets]
-        self.mediaPlayer = QMediaPlayer(self.ui.frame_5, QMediaPlayer.VideoSurface)
-        self.videoWidget = QVideoWidget()
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        self.mediaPlayer.setObjectName("media_player")
-        self.ui.horizontalLayout_13.insertWidget(0, self.videoWidget)
+        # region [ Add widgets]
+        self.mediaPlayer1 = QMediaPlayer(self.ui.frame_5, QMediaPlayer.VideoSurface)
+        self.videoWidget1 = QVideoWidget()
+        #sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        #sizePolicy.setHorizontalStretch(0)
+        #sizePolicy.setVerticalStretch(0)
+        self.mediaPlayer1.setObjectName("media_player1")
+        self.ui.horizontalLayout_13.insertWidget(0, self.videoWidget1)
+
+        self.mediaPlayer2 = QMediaPlayer(self.ui.frame_5, QMediaPlayer.VideoSurface)
+        self.videoWidget2 = QVideoWidget() 
+        self.mediaPlayer2.setObjectName("media_player2")
+        self.ui.horizontalLayout_13.insertWidget(1, self.videoWidget2)
+
+        self.output1 = QtWidgets.QTextEdit(self.ui.ConFrame)
+        self.output1.setObjectName("output1")
+        self.ui.verticalLayout_4.addWidget(self.output1)
+        self.output2 = QtWidgets.QTextEdit(self.ui.ConFrame_2)
+        self.output2.setObjectName("output2")
+        self.ui.verticalLayout_7.addWidget(self.output2)
 
         # endregion
 
-        
+        # region [ Delete widgets ]
+
+        self.ui.horizontalLayout_13.removeWidget(self.ui.label_9)
+        self.ui.label_9.deleteLater()
+        self.ui.label_9 = None
+
+        self.ui.verticalLayout_4.removeWidget(self.ui.graphicsView)
+        self.ui.graphicsView.deleteLater()
+        self.ui.graphicsView = None 
+
+        self.ui.verticalLayout_7.removeWidget(self.ui.graphicsView_2)
+        self.ui.graphicsView_2.deleteLater()
+        self.ui.graphicsView_2 = None
+
+        #self.ui.horizontalLayout_15.removeWidget(self.ui.label_7)
+        #self.ui.label_7.deleteLater() 
+        #self.ui.label_7 = None
+
+        #self.ui.horizontalLayout_15.removeWidget(self.ui.label_8)
+        #self.ui.label_8.deleteLater() 
+        #self.ui.label_8 = None
+
+
+        # endregion
         
         # region [ Add slider 1 ]
         self.slider_1 = QtWidgets.QSlider(QtCore.Qt.Horizontal, self.ui.frame_6)
@@ -74,8 +110,8 @@ class MightyMicros(QtWidgets.QMainWindow):
         # endregion
 
         # region [ Edit TextEdit Widget]
-        self.ui.output1.setReadOnly(True)
-        self.ui.output2.setReadOnly(True)
+        self.output1.setReadOnly(True)
+        self.output2.setReadOnly(True)
 
         # endregion
         # endregion
@@ -96,12 +132,21 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.Thread2.start()
         self.Thread2.ImageUpdate.connect(self.ImageUpdateSlot2)
 
-        self.ui.pushButton_2.clicked.connect(self.playVideo)
+        self.ui.pushButton_2.clicked.connect(self.playVideo1)
         
-        self.mediaPlayer.setVideoOutput(self.videoWidget)
-        self.mediaPlayer.stateChanged.connect(self.mediaStateChange)
-        self.mediaPlayer.positionChanged.connect(self.positionChanged)
-        self.mediaPlayer.durationChanged.connect(self.durationChanged)
+        self.mediaPlayer1.setVideoOutput(self.videoWidget1)
+        self.mediaPlayer2.setVideoOutput(self.videoWidget2)
+
+        self.mediaPlayer1.stateChanged.connect(self.mediaStateChange1)
+        self.mediaPlayer1.positionChanged.connect(self.positionChanged1)
+        self.mediaPlayer1.durationChanged.connect(self.durationChanged1)
+
+        self.ui.pushButton_5.clicked.connect(self.playVideo2)
+        
+    
+        self.mediaPlayer2.stateChanged.connect(self.mediaStateChange2)
+        self.mediaPlayer2.positionChanged.connect(self.positionChanged2)
+        self.mediaPlayer2.durationChanged.connect(self.durationChanged2)
 
         self.videoCombo.currentTextChanged.connect(self.comboBoxChanged)
         # endregion
@@ -137,7 +182,7 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.Thread2 = Thread2(self.videoNumber, True, self)
             self.Thread2.start() 
 
-            self.ui.output1.append("\nRecording Video "+str(self.videoNumber)+" Started")
+            self.output1.append("\nRecording Video "+str(self.videoNumber)+" Started")
             
         else: 
             self.ui.pushButton.setText("Start Recording")
@@ -145,7 +190,7 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.Thread1.stop()
             self.Thread2.stop()
 
-            self.ui.output1.append("\nRecording Video "+str(self.videoNumber)+" Stopped")
+            self.output1.append("\nRecording Video "+str(self.videoNumber)+" Stopped")
             self.videoCombo.addItem('Video ' + str(self.videoNumber))
             self.videoNumber += 1
 
@@ -156,35 +201,67 @@ class MightyMicros(QtWidgets.QMainWindow):
             #self.mediaPlayer.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(filename)))
             #self.ui.pushButton_2.setEnabled(True)
 
-    #function to change button icon 
-    def mediaStateChange(self, state): 
-        if self.mediaPlayer.state() == QMediaPlayer.PlayingState: 
+    #function to change button text 
+    def mediaStateChange1(self, state): 
+        if self.mediaPlayer1.state() == QMediaPlayer.PlayingState: 
             self.ui.pushButton_2.setText("Pause")
         else: 
             self.ui.pushButton_2.setText("Play")
 
     #functions to change the position and duration of the slider
-    def positionChanged(self, position):
+    def positionChanged1(self, position):
         self.slider_1.setValue(position)
 
-    def durationChanged(self, duration): 
+    def durationChanged1(self, duration): 
         self.slider_1.setRange(0, duration)
 
-    def setPosition(self, position): 
-        self.mediaPlayer.setPosition(position)
+    def setPosition1(self, position): 
+        self.mediaPlayer1.setPosition(position)
 
-    def playVideo(self): 
-        if self.mediaPlayer.state() == QMediaPlayer.PlayingState: 
-            self.mediaPlayer.pause()
+    def playVideo1(self): 
+        if self.mediaPlayer1.state() == QMediaPlayer.PlayingState: 
+            self.mediaPlayer1.pause()
         else: 
-            self.mediaPlayer.play()
+            self.mediaPlayer1.play()
+
+    #function to change button text 
+    def mediaStateChange2(self, state): 
+        if self.mediaPlayer2.state() == QMediaPlayer.PlayingState: 
+            self.ui.pushButton_5.setText("Pause")
+        else: 
+            self.ui.pushButton_5.setText("Play")
+
+    #functions to change the position and duration of the slider
+    def positionChanged2(self, position):
+        self.slider_2.setValue(position)
+
+    def durationChanged2(self, duration): 
+        self.slider_2.setRange(0, duration)
+
+    def setPosition2(self, position): 
+        self.mediaPlayer2.setPosition(position)
+
+    def playVideo2(self): 
+        if self.mediaPlayer2.state() == QMediaPlayer.PlayingState: 
+            self.mediaPlayer2.pause()
+        else: 
+            self.mediaPlayer2.play()
     
-    #need to change this to be able to play both videos, also need to code up the other play button
+    #function to load both videos into media player when the combo box value is changed 
     def comboBoxChanged(self, value): 
         QtTest.QTest.qWait(1000)
-        filename = value
-        self.mediaPlayer.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(os.getcwd()+'/'+str(filename))))
+
+        cb_value = str(value)
+        num = ''
+        for i in cb_value: 
+            if i.isdigit():
+                num += i
+
+        self.mediaPlayer1.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(os.getcwd()+'/video_recording_1_'+num+'.mp4')))
+        self.mediaPlayer2.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(os.getcwd()+'/video_recording_2_'+num+'.mp4')))
+
         self.ui.pushButton_2.setEnabled(True)
+        self.ui.pushButton_5.setEnabled(True)
 
     
     def closeEvent(self, event: QtGui.QCloseEvent):
