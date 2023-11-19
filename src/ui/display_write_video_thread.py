@@ -14,11 +14,12 @@ from src import PROJECT_ROOT
 class Thread1(QThread):
     
 
-    def __init__(self, videoNumber: int, isRecord: bool, parent = None):
+    def __init__(self, videoNumber: int, isRecord: bool, frame1: QImage, parent = None):
         super(Thread1, self).__init__(parent)
         self.videoNumber = videoNumber
         self.ThreadActive = True 
         self.isRecord = isRecord
+        self.frame1 = frame1
 
     def run(self):
         
@@ -33,8 +34,9 @@ class Thread1(QThread):
 
         while self.ThreadActive: 
                 if self.isRecord: 
-                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-                    self.Output.write(frame)
+
+                    frame1 = cv2.cvtColor(self.frame1, cv2.COLOR_RGB2BGR)
+                    self.Output.write(frame1)
 
     def stop(self):
         self.ThreadActive = False
@@ -45,11 +47,12 @@ class Thread1(QThread):
 #recording the camera feed that is on the right hand side is not working for some reason 
 class Thread2(QThread):
 
-    def __init__(self, videoNumber: int, isRecord: bool, parent = None):
+    def __init__(self, videoNumber: int, isRecord: bool, frame2: QImage, parent = None):
         super(Thread2, self).__init__(parent)
         self.videoNumber = videoNumber
         self.ThreadActive = True #- see if commenting this out works
         self.isRecord = isRecord
+        self.frame2 = frame2
 
     def run(self):
         
@@ -64,8 +67,8 @@ class Thread2(QThread):
 
         while self.ThreadActive: 
                 if self.isRecord: 
-                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-                    self.Output.write(frame)
+                    frame2 = cv2.cvtColor(self.frame2, cv2.COLOR_RGB2BGR)
+                    self.Output.write(frame2)
 
     def stop(self):
         self.ThreadActive = False

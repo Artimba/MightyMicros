@@ -190,10 +190,10 @@ class MightyMicros(QtWidgets.QMainWindow):
 
             #start writing the video
             self.ThreadActive = True
-            self.Thread1 = Thread1(self.videoNumber, True, self)
+            self.Thread1 = Thread1(self.videoNumber, True, self.frame1, self)
             self.Thread1.start()
 
-            self.Thread2 = Thread2(self.videoNumber, True, self)
+            self.Thread2 = Thread2(self.videoNumber, True, self.frame2, self)
             self.Thread2.start() 
 
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Started")
@@ -303,6 +303,8 @@ class MightyMicros(QtWidgets.QMainWindow):
             qt_frame = qt_frame.scaled(640, 480, QtCore.Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
 
             self.ImageUpdateSlot1(qt_frame)
+
+            self.frame1 = qt_frame
     
     def updateFrame2(self):
         ret, frame = self.camera2.read() #get frame from video feed
@@ -324,6 +326,8 @@ class MightyMicros(QtWidgets.QMainWindow):
             qt_frame = qt_frame.scaled(640, 480, QtCore.Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
 
             self.ImageUpdateSlot2(qt_frame)
+
+            self.frame2 = qt_frame
 
     
     def closeEvent(self, event: QtGui.QCloseEvent):
