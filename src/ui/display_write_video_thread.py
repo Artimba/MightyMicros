@@ -12,16 +12,15 @@ from src import PROJECT_ROOT
 
 #class for a thread to display video and write video to a file 
 class Thread1(QThread):
-    ImageUpdate = pyqtSignal(QImage)
+    
 
     def __init__(self, videoNumber: int, isRecord: bool, parent = None):
         super(Thread1, self).__init__(parent)
         self.videoNumber = videoNumber
-        self.ThreadActive = True #- see if commenting this out works
+        self.ThreadActive = True 
         self.isRecord = isRecord
 
     def run(self):
-        Capture = cv2.VideoCapture(0) #get video feed
         
         # This is used over just a string for OS interoperability
         #weights_path = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
@@ -33,25 +32,6 @@ class Thread1(QThread):
         #self.Capture = cv2.VideoCapture(0)
 
         while self.ThreadActive: 
-            ret, frame = Capture.read() #get frame from video feed
-            if ret: 
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #get color image from feed
-                frame = cv2.resize(frame, (640, 480))
-                
-        
-                #results = self.model.predict(frame)
-                
-                #annotated_frame = results[0].plot(labels=False, masks=False)
-
-            
-                
-                #FlippedImage = cv2.flip(Image, 1) #flip video on vertical axis 
-                #qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
-                qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
-                
-                qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
-                self.ImageUpdate.emit(qt_frame) #emit the thread: send to main window 
-
                 if self.isRecord: 
                     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                     self.Output.write(frame)
@@ -64,7 +44,6 @@ class Thread1(QThread):
 #class for a thread to display video and write video to a file 
 #recording the camera feed that is on the right hand side is not working for some reason 
 class Thread2(QThread):
-    ImageUpdate = pyqtSignal(QImage)
 
     def __init__(self, videoNumber: int, isRecord: bool, parent = None):
         super(Thread2, self).__init__(parent)
@@ -73,37 +52,17 @@ class Thread2(QThread):
         self.isRecord = isRecord
 
     def run(self):
-        Capture = cv2.VideoCapture(1) #get video feed
         
         # This is used over just a string for OS interoperability
-        weights_path = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
+        #weights_path = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
 
-        self.model = Model(weights_path)
+        #self.model = Model(weights_path)
         self.Fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         self.Output = cv2.VideoWriter('video_recording_2_'+str(self.videoNumber)+'.mp4', self.Fourcc, 15, (640, 480))
 
         #self.Capture = cv2.VideoCapture(0)
 
         while self.ThreadActive: 
-            ret, frame = Capture.read() #get frame from video feed
-            if ret: 
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #get color image from feed
-                frame = cv2.resize(frame, (640, 480))
-                
-        
-                #results = self.model.predict(frame)
-                
-                #annotated_frame = results[0].plot(labels=False, masks=False)
-
-            
-                
-                #FlippedImage = cv2.flip(Image, 1) #flip video on vertical axis 
-                #qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
-                qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
-                
-                qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
-                self.ImageUpdate.emit(qt_frame) #emit the thread: send to main window 
-
                 if self.isRecord: 
                     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                     self.Output.write(frame)

@@ -5,6 +5,7 @@ from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 import sys
 import os
+import cv2
 
 from src.ui.main_ui import Ui_MainWindow
 from src.ui.display_write_video_thread import Thread1, Thread2
@@ -32,6 +33,18 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.frame_5.setMinimumSize(QtCore.QSize(440, 330))
 
         # region [ Widgets ]
+
+        # region [ Set up camera display ]
+        self.camera1 = cv2.VideoCapture(0)
+        self.timer1 = QtCore.QTimer(self)
+        self.timer1.timeout.connect(self.updateFrame1)
+        self.timer1.start(30)
+
+        self.camera2 = cv2.VideoCapture(1)
+        self.timer2 = QtCore.QTimer(self)
+        self.timer2.timeout.connect(self.updateFrame2)
+        self.timer2.start(30)
+        # endregion
 
         # region [Add combo box widget] 
         self.videoCombo = QtWidgets.QComboBox(self.ui.frame_4)
@@ -125,13 +138,13 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         self.ui.pushButton.clicked.connect(self.ClickBTN)
         
-        self.Thread1 = Thread1(self.videoNumber, False)
-        self.Thread1.start()
-        self.Thread1.ImageUpdate.connect(self.ImageUpdateSlot1)
+        #self.Thread1 = Thread1(self.videoNumber, False)
+        #self.Thread1.start()
+        #self.Thread1.ImageUpdate.connect(self.ImageUpdateSlot1)
         
-        self.Thread2 = Thread2(self.videoNumber, False)
-        self.Thread2.start()
-        self.Thread2.ImageUpdate.connect(self.ImageUpdateSlot2)
+        #self.Thread2 = Thread2(self.videoNumber, False)
+        #self.Thread2.start()
+        #self.Thread2.ImageUpdate.connect(self.ImageUpdateSlot2)
 
         self.ui.pushButton_2.clicked.connect(self.playVideo1)
         
@@ -224,6 +237,9 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.mediaPlayer1.pause()
         else: 
             self.mediaPlayer1.play()
+    
+    
+
 
     #function to change button text 
     def mediaStateChange2(self, state): 
@@ -247,6 +263,8 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.mediaPlayer2.pause()
         else: 
             self.mediaPlayer2.play()
+
+    
     
     #function to load both videos into media player when the combo box value is changed 
     def comboBoxChanged(self, value): 
@@ -263,6 +281,49 @@ class MightyMicros(QtWidgets.QMainWindow):
 
         self.ui.pushButton_2.setEnabled(True)
         self.ui.pushButton_5.setEnabled(True)
+
+    def updateFrame1(self):
+    
+        ret, frame = self.camera1.read() #get frame from video feed
+        
+        if ret: 
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #get color image from feed
+            frame = cv2.resize(frame, (640, 480))
+                
+        
+                #results = self.model.predict(frame)
+                
+                #annotated_frame = results[0].plot(labels=False, masks=False)
+
+            
+                
+            qt_frame = QtGui.QImage(frame.data, frame.shape[1], frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
+            #qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
+            
+            qt_frame = qt_frame.scaled(640, 480, QtCore.Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
+
+            self.ImageUpdateSlot1(qt_frame)
+    
+    def updateFrame2(self):
+        ret, frame = self.camera2.read() #get frame from video feed
+        
+        if ret: 
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #get color image from feed
+            frame = cv2.resize(frame, (640, 480))
+                
+        
+                #results = self.model.predict(frame)
+                
+                #annotated_frame = results[0].plot(labels=False, masks=False)
+
+            
+                
+            qt_frame = QtGui.QImage(frame.data, frame.shape[1], frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
+            #qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
+            
+            qt_frame = qt_frame.scaled(640, 480, QtCore.Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
+
+            self.ImageUpdateSlot2(qt_frame)
 
     
     def closeEvent(self, event: QtGui.QCloseEvent):
