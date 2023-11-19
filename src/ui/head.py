@@ -7,6 +7,7 @@ import sys
 import os
 import cv2
 
+
 from src.ui.main_ui import Ui_MainWindow
 from src.ui.display_write_video_thread import Thread1, Thread2
 
@@ -304,7 +305,7 @@ class MightyMicros(QtWidgets.QMainWindow):
 
             self.ImageUpdateSlot1(qt_frame)
 
-            self.frame1 = qt_frame
+            self.frame1 = frame
     
     def updateFrame2(self):
         ret, frame = self.camera2.read() #get frame from video feed
@@ -327,7 +328,7 @@ class MightyMicros(QtWidgets.QMainWindow):
 
             self.ImageUpdateSlot2(qt_frame)
 
-            self.frame2 = qt_frame
+            self.frame2 = frame
 
     
     def closeEvent(self, event: QtGui.QCloseEvent):

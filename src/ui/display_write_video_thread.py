@@ -6,6 +6,7 @@ from PyQt5.QtMultimediaWidgets import *
 from PyQt5.QtMultimedia import *
 import cv2
 
+
 from src.pipeline.detection import Model
 from src import PROJECT_ROOT
 
@@ -34,7 +35,7 @@ class Thread1(QThread):
 
         while self.ThreadActive: 
                 if self.isRecord: 
-
+                  
                     frame1 = cv2.cvtColor(self.frame1, cv2.COLOR_RGB2BGR)
                     self.Output.write(frame1)
 
@@ -67,6 +68,7 @@ class Thread2(QThread):
 
         while self.ThreadActive: 
                 if self.isRecord: 
+                   
                     frame2 = cv2.cvtColor(self.frame2, cv2.COLOR_RGB2BGR)
                     self.Output.write(frame2)
 
