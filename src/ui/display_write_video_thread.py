@@ -5,22 +5,39 @@ from PyQt5.QtCore import *
 from PyQt5.QtMultimediaWidgets import *
 from PyQt5.QtMultimedia import *
 import cv2
-
+import numpy as np
+from sys import settrace
 
 from src.pipeline.detection import Model
 from src import PROJECT_ROOT
 
 
+def my_tracer(frame, event, arg = None): 
+    # extracts frame code 
+    code = frame.f_code 
+  
+    # extracts calling function name 
+    func_name = code.co_name 
+  
+    # extracts the line number 
+    line_no = frame.f_lineno 
+  
+    print(f"A {event} encountered in {func_name}() at line number {line_no} ") 
+  
+    return my_tracer
+
+settrace(my_tracer)
+
 #class for a thread to display video and write video to a file 
 class Thread1(QThread):
     
 
-    def __init__(self, videoNumber: int, isRecord: bool, frame1: QImage, parent = None):
+    def __init__(self, videoNumber: int, frame: np.ndarray, parent = None):
         super(Thread1, self).__init__(parent)
         self.videoNumber = videoNumber
         self.ThreadActive = True 
-        self.isRecord = isRecord
-        self.frame1 = frame1
+        
+        self.frame = frame
 
     def run(self):
         
@@ -34,10 +51,9 @@ class Thread1(QThread):
         #self.Capture = cv2.VideoCapture(0)
 
         while self.ThreadActive: 
-                if self.isRecord: 
-                  
-                    frame1 = cv2.cvtColor(self.frame1, cv2.COLOR_RGB2BGR)
-                    self.Output.write(frame1)
+            frame1 = cv2.cvtColor(self.frame, cv2.COLOR_RGB2BGR)
+            self.Output.write(frame1)
+       
 
     def stop(self):
         self.ThreadActive = False
@@ -48,12 +64,12 @@ class Thread1(QThread):
 #recording the camera feed that is on the right hand side is not working for some reason 
 class Thread2(QThread):
 
-    def __init__(self, videoNumber: int, isRecord: bool, frame2: QImage, parent = None):
+    def __init__(self, videoNumber: int, frame: np.ndarray, parent = None):
         super(Thread2, self).__init__(parent)
         self.videoNumber = videoNumber
         self.ThreadActive = True #- see if commenting this out works
-        self.isRecord = isRecord
-        self.frame2 = frame2
+ 
+        self.frame = frame
 
     def run(self):
         
@@ -67,10 +83,10 @@ class Thread2(QThread):
         #self.Capture = cv2.VideoCapture(0)
 
         while self.ThreadActive: 
-                if self.isRecord: 
+
                    
-                    frame2 = cv2.cvtColor(self.frame2, cv2.COLOR_RGB2BGR)
-                    self.Output.write(frame2)
+            frame2 = cv2.cvtColor(self.frame, cv2.COLOR_RGB2BGR)
+            self.Output.write(frame2)
 
     def stop(self):
         self.ThreadActive = False

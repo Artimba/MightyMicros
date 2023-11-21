@@ -32,7 +32,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.pushButton_2.setEnabled(False)
         self.ui.pushButton_5.setEnabled(False)
         self.ui.frame_5.setMinimumSize(QtCore.QSize(440, 330))
-
+        
         # region [ Widgets ]
 
         # region [ Set up camera display ]
@@ -65,6 +65,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.videoWidget2 = QVideoWidget() 
         self.mediaPlayer2.setObjectName("media_player2")
         self.ui.horizontalLayout_13.insertWidget(1, self.videoWidget2)
+
 
         self.output1 = QtWidgets.QTextEdit(self.ui.ConFrame)
         self.output1.setObjectName("output1")
@@ -172,6 +173,9 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.pushButton_5.setText(_translate("MainWindow", "Play"))
         self.ui.label_3.setText(_translate("MainWindow", ""))
         self.ui.label_4.setText(_translate("MainWindow", ""))
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.RecordTab), _translate("MainWindow", "Camera Feeds"))
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_2), _translate("MainWindow", "Media Players"))
+
         # endregion
         
      
@@ -184,17 +188,17 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.label_4.setPixmap(QtGui.QPixmap.fromImage(Image)) 
 
     def ClickBTN(self):
-        #disable start button so user can't click it
+        
         if self.timer.isActive() == False:
             self.ui.pushButton.setText("Stop Recording")  
             self.timer.start() #start the timer
 
             #start writing the video
             self.ThreadActive = True
-            self.Thread1 = Thread1(self.videoNumber, True, self.frame1, self)
+            self.Thread1 = Thread1(self.videoNumber, self.frame1, self)
             self.Thread1.start()
 
-            self.Thread2 = Thread2(self.videoNumber, True, self.frame2, self)
+            self.Thread2 = Thread2(self.videoNumber, self.frame2, self)
             self.Thread2.start() 
 
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Started")
@@ -306,6 +310,8 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.ImageUpdateSlot1(qt_frame)
 
             self.frame1 = frame
+
+        
     
     def updateFrame2(self):
         ret, frame = self.camera2.read() #get frame from video feed
