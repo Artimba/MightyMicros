@@ -294,44 +294,44 @@ class MightyMicros(QtWidgets.QMainWindow):
     
         ret, frame = self.camera1.read() #get frame from video feed
 
-        weights_path = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
+        #weights_path = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
 
-        self.model = Model(weights_path)
+        #self.model = Model(weights_path)
         
         if ret: 
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #get color image from feed
             frame = cv2.resize(frame, (640, 480))
                 
         
-            results = self.model.predict(frame)
+            #results = self.model.predict(frame)
                 
-            annotated_frame = results[0].plot(labels=False, masks=False)
+            #annotated_frame = results[0].plot(labels=False, masks=False)
 
             
 
-            try: 
+            # try: 
 
-                for i, bbox in enumerate(results[0].boxes.xyxy):
-                    coord = results[0].boxes.xyxy[i].numpy()
-                    self.output1.append("Slice " + str(self.numSlices) + " at (" + str(coord[0]) + ", "+ str(coord[1]) + ") and (" + str(coord[2]) + ", "+str(coord[3]))
-                    self.numSlices += 1
-                    print(results[0].boxes.xyxy[i])
-                    #print(str(results[0].boxes.xyxy[i][0]))
+            #     for i, bbox in enumerate(results[0].boxes.xyxy):
+            #         coord = results[0].boxes.xyxy[i].numpy()
+            #         self.output1.append("Slice " + str(self.numSlices) + " at (" + str(coord[0]) + ", "+ str(coord[1]) + ") and (" + str(coord[2]) + ", "+str(coord[3]))
+            #         self.numSlices += 1
+            #         print(results[0].boxes.xyxy[i])
+            #         #print(str(results[0].boxes.xyxy[i][0]))
                 
-            except IndexError: 
-                pass
+            # except IndexError: 
+            #     pass
 
            
             
                 
-            #qt_frame = QtGui.QImage(frame.data, frame.shape[1], frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
-            qt_frame = QtGui.QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
+            qt_frame = QtGui.QImage(frame.data, frame.shape[1], frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
+            #qt_frame = QtGui.QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
             
             qt_frame = qt_frame.scaled(640, 480, QtCore.Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
 
             self.ImageUpdateSlot1(qt_frame)
 
-            self.frame1 = annotated_frame
+            self.frame1 = frame
 
         
     
