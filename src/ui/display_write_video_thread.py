@@ -36,10 +36,12 @@ def my_tracer(frame, event, arg = None):
 class Thread1(QThread):
     
 
-    def __init__(self, videoNumber: int, frame: np.ndarray, parent = None):
+    def __init__(self, videoNumber: int, frame: np.ndarray, output: cv2.VideoWriter, parent = None):
         super(Thread1, self).__init__(parent)
         self.videoNumber = videoNumber
         self.ThreadActive = True 
+        self.Output = output
+        
         
         self.frame = frame
 
@@ -47,13 +49,13 @@ class Thread1(QThread):
         
         # This is used over just a string for OS interoperability
         
-        self.Fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        self.Output = cv2.VideoWriter('video_recording_1_'+str(self.videoNumber)+'.mp4', self.Fourcc, 15, (640, 480))
-
 
         while self.ThreadActive: 
+
             frame1 = cv2.cvtColor(self.frame, cv2.COLOR_RGB2BGR)
+
             self.Output.write(frame1)
+
        
 
     def stop(self):

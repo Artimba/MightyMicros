@@ -35,6 +35,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.pushButton_5.setEnabled(False)
         self.ui.frame_5.setMinimumSize(QtCore.QSize(440, 330))
         self.numSlices = 1
+        self.isRecord = False 
         
         # region [ Widgets ]
 
@@ -197,24 +198,27 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.timer.start() #start the timer
 
             #start writing the video
-            self.ThreadActive = True
-            self.Thread1 = Thread1(self.videoNumber, self.frame1, self)
-            self.Thread1.start()
+            
+            self.Fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            self.Output = cv2.VideoWriter('video_recording_1_'+str(self.videoNumber)+'.mp4', self.Fourcc, 20, (640, 480))
+   
+            self.isRecord = True
 
-            self.Thread2 = Thread2(self.videoNumber, self.frame2, self)
-            self.Thread2.start() 
 
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Started")
             
         else: 
+
             self.ui.pushButton.setText("Start Recording")
             self.timer.stop() 
+            
+            self.isRecord = False
             self.Thread1.stop()
-            self.Thread2.stop()
 
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Stopped")
             self.videoCombo.addItem('Video ' + str(self.videoNumber))
             self.videoNumber += 1
+
 
             #load video to media player
             
@@ -309,6 +313,7 @@ class MightyMicros(QtWidgets.QMainWindow):
 
             
 
+
             # try: 
 
             #     for i, bbox in enumerate(results[0].boxes.xyxy):
@@ -332,6 +337,14 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.ImageUpdateSlot1(qt_frame)
 
             self.frame1 = frame
+
+        if self.isRecord == True: 
+            self.ThreadActive = True
+            self.Thread1 = Thread1(self.videoNumber, self.frame1, self.Output, self)
+            self.Thread1.start()
+        
+
+            
 
         
     
@@ -361,6 +374,11 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.ImageUpdateSlot2(qt_frame)
 
             self.frame2 = frame
+
+        #if self.isRecord == True: 
+            #self.Thread2 = Thread2(self.videoNumber, self.frame2, self)
+            #self.Thread2.start() 
+            #need to stop the threads somehow 
 
     
     def closeEvent(self, event: QtGui.QCloseEvent):
