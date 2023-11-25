@@ -166,3 +166,6 @@ converter/
 training/
 *.mp4
 .DS_Store
+runs/*
+launch.json
+output_*.json

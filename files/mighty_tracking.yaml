@@ -1,12 +1,22 @@
 # YOLO dataset configuration
 
-# Paths
-path: /home/sky/datasets/training_set_1  # root dir
-train: images/train  # train images (relative to 'path')
-val: images/val  # validation images (relative to 'path')
+# Paths for multiple datasets
+path: /home/sky/datasets  # common root dir for all datasets
 
-# Number of classes
+# Training and validation paths for each dataset
+train: 
+  - master_set/images/train
+  # - training_set_1/images/train  # train images for dataset 1
+  # - training_set_2/images/train  # train images for dataset 2
+  # - training_set_3/images/train  # train images for dataset 3
+val: 
+  - master_set/images/val
+  # - training_set_1/images/val  # validation images for dataset 1
+  # - training_set_2/images/val  # validation images for dataset 2
+  # - training_set_3/images/val  # validation images for dataset 3
+
+# Number of classes (assuming it's the same for all datasets)
 nc: 1
 
-# Class names
+# Class names (assuming the same for all datasets)
 names: ['slice']

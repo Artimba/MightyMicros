@@ -147,8 +147,8 @@ if __name__ == "__main__":
     # parser.add_argument("-o", "--output_base", default='output/', help="Path to output base directory")
     # args = parser.parse_args()
     
-    json_path = 'data/mighty-tracking-annotated-2023-11.json'
-    video_path = 'data/20231017_120545.mp4'
-    output_path = '/home/sky/datasets/training_set_{i}'
+    json_path = 'data/output_3.json'
+    video_path = 'data/mighty-phone-1.mp4'
+    output_path = '/home/sky/datasets/training_set_3'
 
     main(json_path, video_path, output_path)

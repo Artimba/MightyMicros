@@ -2,33 +2,13 @@
 This is a quick script that can be used to take an image and run one of our models on it after training.
 """
 
-# from ultralytics import YOLO
-# import cv2
-# from PIL import Image
-
-# # Path to the image you want to predict on
-# image_path = 'data/frame_0.jpg'
-
-# # Load a pretrained model (specify the correct path or model name)
-# model = YOLO('runs/detect/train3/weights/best.pt')  # Replace with the path to your model weights
-
-# # Load image
-# image = cv2.imread(image_path)
-
-# # Run YOLO model prediction
-# results = model.predict(image)
-
-# # Show the results
-# for r in results:
-#     im_array = r.plot(line_width=0.5, labels=False, probs=False)  # plot a BGR numpy array of predictions
-#     im = Image.fromarray(im_array[..., ::-1])  # RGB PIL image
-#     im.show()  # show image
-
 import cv2
 from ultralytics import YOLO
 
+from src.pipeline.model import Model
+
 # Load the YOLOv8 model
-model = YOLO('runs/detect/train3/weights/best.pt')
+model = Model('runs/detect/train4/weights/best.pt')
 
 # Open the video file
 video_path = "data/20231017_120545.mp4"
@@ -41,7 +21,7 @@ while cap.isOpened():
 
     if success:
         # Run YOLOv8 inference on the frame
-        results = model(frame)
+        results = model.predict(frame)
 
         # Visualize the results on the frame
         annotated_frame = results[0].plot(labels=False, masks=False)
@@ -49,9 +29,11 @@ while cap.isOpened():
         # Display the annotated frame
         cv2.imshow("YOLOv8 Inference", annotated_frame)
 
-        # Break the loop if 'q' is pressed
-        if cv2.waitKey(1) & 0xFF == ord("q"):
+        key = cv2.waitKey(0)  # Wait indefinitely for a key press
+        if key == ord("q"):
             break
+        elif key == 32:  # ASCII code for spacebar
+            continue  # Go to the next iteration and thus the next frame
     else:
         # Break the loop if the end of the video is reached
         break

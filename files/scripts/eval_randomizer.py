@@ -12,10 +12,10 @@ random.seed(42)
 
 # Paths
 origin_path = 'converter/images/'
-train_images_path = 'training/images/train/'
-val_images_path = 'training/images/val/'
-train_labels_path = 'training/labels/train/'
-val_labels_path = 'training/labels/val/'
+train_images_path = '/home/sky/datasets/training_set_3/images/train/'
+val_images_path = '/home/sky/datasets/training_set_3/images/val/'
+train_labels_path = '/home/sky/datasets/training_set_3/labels/train/'
+val_labels_path = '/home/sky/datasets/training_set_3/labels/val/'
 
 # Make sure destination folders exist
 os.makedirs(train_images_path, exist_ok=True)
