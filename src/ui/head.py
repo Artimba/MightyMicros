@@ -9,7 +9,7 @@ import cv2
 
 
 from src.ui.main_ui import Ui_MainWindow
-from src.ui.display_write_video_thread import Thread1, Thread2
+from src.ui.display_write_video_thread import Thread1, Thread2, Thread3
 from src import PROJECT_ROOT
 from src.pipeline.detection import Model
 
@@ -35,7 +35,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.pushButton_5.setEnabled(False)
         self.ui.frame_5.setMinimumSize(QtCore.QSize(440, 330))
         self.numSlices = 1
-        self.isRecord = False 
+        self.isRecord = False
         
         # region [ Widgets ]
 
@@ -198,27 +198,36 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.timer.start() #start the timer
 
             #start writing the video
-            
-            self.Fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            self.Output = cv2.VideoWriter('video_recording_1_'+str(self.videoNumber)+'.mp4', self.Fourcc, 20, (640, 480))
-   
-            self.isRecord = True
 
+
+            self.Fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            self.Output1 = cv2.VideoWriter('video_recording_1_'+str(self.videoNumber)+'.mp4', self.Fourcc, 30, (640, 480))
+
+         
+            self.Output2 = cv2.VideoWriter('video_recording_2_'+str(self.videoNumber)+'.mp4', self.Fourcc, 15, (640, 480))
+
+
+            self.ThreadActive = True
+
+            self.isRecord = True
+            
+            #self.Thread2 = Thread2(self.videoNumber, self.frame2, self)
+            #self.Thread2.start() 
 
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Started")
             
         else: 
-
             self.ui.pushButton.setText("Start Recording")
             self.timer.stop() 
-            
             self.isRecord = False
-            self.Thread1.stop()
+            #self.Thread1.stop()
+            #self.Thread2.stop()
+            self.Output1.release()
+            self.Output2.release()
 
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Stopped")
             self.videoCombo.addItem('Video ' + str(self.videoNumber))
             self.videoNumber += 1
-
 
             #load video to media player
             
@@ -306,45 +315,56 @@ class MightyMicros(QtWidgets.QMainWindow):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #get color image from feed
             frame = cv2.resize(frame, (640, 480))
                 
-        
+
             #results = self.model.predict(frame)
                 
             #annotated_frame = results[0].plot(labels=False, masks=False)
 
             
 
+            #try: 
 
-            # try: 
-
-            #     for i, bbox in enumerate(results[0].boxes.xyxy):
-            #         coord = results[0].boxes.xyxy[i].numpy()
-            #         self.output1.append("Slice " + str(self.numSlices) + " at (" + str(coord[0]) + ", "+ str(coord[1]) + ") and (" + str(coord[2]) + ", "+str(coord[3]))
-            #         self.numSlices += 1
-            #         print(results[0].boxes.xyxy[i])
-            #         #print(str(results[0].boxes.xyxy[i][0]))
+                #for i, bbox in enumerate(results[0].boxes.xyxy):
+                 #   coord = results[0].boxes.xyxy[i].numpy()
+                  #  self.output1.append("Slice " + str(self.numSlices) + " at (" + str(coord[0]) + ", "+ str(coord[1]) + ") and (" + str(coord[2]) + ", "+str(coord[3]))
+                   # self.numSlices += 1
+                    #print(results[0].boxes.xyxy[i])
+                    #print(str(results[0].boxes.xyxy[i][0]))
                 
-            # except IndexError: 
-            #     pass
+            #except IndexError: 
+               # pass
 
-           
-            
+            if self.isRecord == True: 
+                self.Thread1 = Thread1(self.videoNumber, self.frame1, self.Output1, self)
+
+                self.Thread1.start()
+
+                QtTest.QTest.qWait(1)
+                self.Thread1.stop()
+
+
+        
+                
+
                 
             qt_frame = QtGui.QImage(frame.data, frame.shape[1], frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
             #qt_frame = QtGui.QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
             
             qt_frame = qt_frame.scaled(640, 480, QtCore.Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
 
+            #run thread3 here 
+            #self.Thread3 = Thread3(frame, self)
+            #self.Thread3.start()
+
+            #QtTest.QTest.qWait(1000)
+
+
+            #self.ImageUpdateSlot1(self.Thread3.frame_edit)
             self.ImageUpdateSlot1(qt_frame)
+            #self.Thread3.stop()
 
+            #self.frame1 = annotated_frame
             self.frame1 = frame
-
-        if self.isRecord == True: 
-            self.ThreadActive = True
-            self.Thread1 = Thread1(self.videoNumber, self.frame1, self.Output, self)
-            self.Thread1.start()
-        
-
-            
 
         
     
@@ -364,7 +384,13 @@ class MightyMicros(QtWidgets.QMainWindow):
                 
             #annotated_frame = results[0].plot(labels=False, masks=False)
 
-            
+            if self.isRecord == True: 
+                self.Thread2 = Thread1(self.videoNumber, self.frame2, self.Output2, self)
+
+                self.Thread2.start()
+
+                QtTest.QTest.qWait(1)
+                self.Thread2.stop()
                 
             qt_frame = QtGui.QImage(frame.data, frame.shape[1], frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
             #qt_frame = QtGui.QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
@@ -374,11 +400,6 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.ImageUpdateSlot2(qt_frame)
 
             self.frame2 = frame
-
-        #if self.isRecord == True: 
-            #self.Thread2 = Thread2(self.videoNumber, self.frame2, self)
-            #self.Thread2.start() 
-            #need to stop the threads somehow 
 
     
     def closeEvent(self, event: QtGui.QCloseEvent):
