@@ -7,3 +7,4 @@ label-studio
 label-studio-ml
 tensorflow
 ultralytics
+pykalman

@@ -21,13 +21,11 @@ while cap.isOpened():
 
     if success:
         # Run YOLOv8 inference on the frame
-        results = model.predict(frame)
-
-        # Visualize the results on the frame
-        annotated_frame = results[0].plot(labels=False, masks=False)
+        frame = model.predict(frame)
+        print("Detections:", len(model.manager.detections))
 
         # Display the annotated frame
-        cv2.imshow("YOLOv8 Inference", annotated_frame)
+        cv2.imshow("YOLOv8 Inference", frame)
 
         key = cv2.waitKey(0)  # Wait indefinitely for a key press
         if key == ord("q"):

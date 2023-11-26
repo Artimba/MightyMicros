@@ -1,124 +1,232 @@
+from dataclasses import dataclass, field
+from typing import Optional
+from ultralytics.engine.results import Boxes
+from numpy import ndarray, linalg
+from math import atan2, hypot
+from cv2 import rectangle, putText, FONT_HERSHEY_SIMPLEX, getTextSize
+from torch import equal as tensor_equal
+from torch import Tensor
+
+from src.pipeline.kalman import KalmanFilter
+
+def calculate_vector(start: tuple, end: tuple) -> tuple:
+    x_1, y_1 = start[:2]
+    x_2, y_2 = end[:2]
+    
+    dx = x_2 - x_1
+    dy = y_2 - y_1
+    
+    angle = atan2(dy, dx) % 360
+    distance = hypot(dx, dy)
+    
+    return distance, angle
+
+def get_direction(angle: float) -> str:
+
+    match angle:
+        case a if 0 <= a < 45 or 315 <= a < 360:
+            return 'E'
+        case a if 45 <= a < 135:
+            return 'N'
+        case a if 135 <= a < 225:
+            return 'W'
+        case a if 225 <= a < 315:
+            return 'S'
+        case _:
+            return 'E'  # Rut-roh scooby, we got a problem.
 
 
-import math
-
-
-class Detection(object):
-    def __init__(self, bbox: tuple, bbox_norm: tuple, database: list):
-        """Initializes a new detection instance.
-
-        Args:
-            bbox (tuple): A tuple representing the bounding box (x1, y1, x2, y2)
-            bbox_norm (tuple): A tuple representing the normalized bounding box (x1, y1, x2, y2)
-            database (list): A list containing all instances of detections.
-        """
+@dataclass
+class Detection:
+    id: int
+    bbox: Tensor
+    bbox_norm: Tensor
+    kalman_filter: KalmanFilter = None
+    neighbors: dict[str, Optional['Detection']] = field(default_factory=lambda: {
+        'N': None, 
+        'NE': None, 
+        'E': None, 
+        'SE': None, 
+        'S': None, 
+        'SW': None, 
+        'W': None, 
+        'NW': None})
+    
+    def initialize_kalman(self, delta_t: float):
+        self.kalman_filter = KalmanFilter(self.bbox_norm, delta_t)
+    
+    def __eq__(self, __value: object) -> bool:
         
-        self.bbox = bbox
-        self.bbox_norm = bbox_norm
-        self.neighbors = []
-        self.id = -1
-        self.find_neighbors(database)
-        
-    def assign_id(self, database: list):
-        """Assigns a unique ID to the detection instance.
-        """
-        # Check spatial key to see if any detections within self.neighbors match up. If so, assign the same ID.
-        
-        # Look at each detection in database, if their neighbors align to this detection's neighbors, assign the same ID.
-        is_match = False
-        for i, detection in enumerate(database):
-            if (is_match := self.equal(detection)):
-                self.id = detection.id
-                database[i] = self  # Overwrite if it is the same detection
-                break
-
-        if not is_match:
-            self.id = len(database) + 1
-            database.append(self)
-        
-    def equal(self, other: object):
-        """Determines if the current detection instance is the same as another detection instance.
-
-        Args:
-            other (object): Another detection instance.
-
-        Returns:
-            bool: True if the current detection instance is the same as another detection instance, False otherwise.
-        """
-        # Check number of neighbors both detections have
-        if len(self.neighbors) != len(other.neighbors):
+        # Check for bad call.
+        if not isinstance(__value, Detection):
+            print(f'Type Mismatch: {type(__value)} must be a Detection object')
             return False
         
-        # Check to see if order of neighbors aligns with another detection in database.
-        # If so, this detection is the same as the matched detection, this detection should override the matched detection.
-        for neighbor, other_neighbor in zip(self.neighbors, other.neighbors):
-            if neighbor['id'] != other_neighbor['id']:
+        # Any match would have same number of neighbors.
+        if len(self.neighbors) != len(__value.neighbors):
+            return False
+        
+        threshold = 0.02
+        
+        # Check if neighbors align.
+        for direction, neighbor in self.neighbors.items():
+            other_neighbor = __value.neighbors[direction]
+            
+            if neighbor is None and other_neighbor is None:
+                continue
+            
+            centroid = self.kalman_filter.calculate_centroid(self.bbox_norm)
+            other_centroid = __value.kalman_filter.current_state_estimate[:2]
+            
+            # Compare centroids of neighbors.
+            if linalg.norm(centroid - other_centroid) > threshold:
                 return False
+            
+        
+        # Neighbors align to other detection. Reasonably assume they are the same.
         return True
+
+class DetectionManager:
+    def __init__(self, frame_rate: int = 30):
+        self.detections = {}
+        self.next_id = 1
+        self.delta_t = frame_rate ** -1
+        
+    def handle_frame(self, results: Boxes, frame: ndarray) -> ndarray:
+        
+        frame_detections = []
+        
+        # Run a prediction on currently managed detections to get estimate locations for this new frame.
+        self.predict_detections()
+        
+        # Generate detections with -1 id for each bbox in results.
+        for bbox, bbox_norm in zip(results.xyxy, results.xyxyn):
+            frame_detections.append(Detection(-1, bbox, bbox_norm))
+        
+        for new_detection in frame_detections:
+            self.process_detection(new_detection)
+        
+        
+        
+        self.generate_neighbors(self.detections.values())
+        
+        for detection in frame_detections:
+            self.add(detection)
+        
+        color_1 = (0, 255, 0)
+        color_2 = (255, 0, 0)
+        thickness = 2
+
+        # Update frame with bboxes that have ids overlayed (inside the bbox).
+        for detection in self.detections.values():
+            text = str(detection.id)
+            x1, y1, x2, y2 = [int(coord) for coord in detection.bbox]  # Ensure you're using detection.bbox
+            bbox_height = y2 - y1
+
+            # Set the font size as a proportion of the bounding box height
+            font_scale = bbox_height / 25  # The denominator controls the text size proportion
+
+            # Calculate the starting coordinates for the text to center it
+            text_size, _ = getTextSize(text, FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+            text_x = x1 + (x2 - x1 - text_size[0]) // 2
+            text_y = y1 + (y2 - y1 + text_size[1]) // 2
+
+            # Draw rectangle around the object
+            rectangle(frame, (x1, y1), (x2, y2), color_1, thickness)
+
+            # Put the text on the frame, adjust y position to compensate for baseline
+            baseline = text_size[1] // 3
+            putText(frame, text, (text_x, text_y - baseline), FONT_HERSHEY_SIMPLEX, font_scale, color_2, thickness)
+
+
+        
+        # Frame updated with bboxs that have id's overlayed (inside the bbox).
+        return frame
     
-    def find_neighbors(self, database: list):
-        """Finds the detections that are spatially close to the current detection instance.
+    def generate_neighbors(self, frame_detections: list[Detection]):
+        # Look at each bbox inside frame_detections. Compare against every other bbox. Use distance and angle (relative to currently processing detection) to calculate neighbors.
+        # A single detection should only have a max of 8 detections, one for each direction (N, NE, E, SE, S, SW, W, NW). This check should be done by looking at angle relative to currently detection.
+        # N would be 45 - 135 degrees, NE would be 135 - 225 degrees, etc.
+        # If a more than one bbox is within a direction, the closest bbox should be used.
+        
+        for detection in frame_detections:
+            neighbors = {'N': None, 'NE': None, 'E': None, 'SE': None,
+                         'S': None, 'SW': None, 'W': None, 'NW': None}
+            min_distances = {direction: float('inf') for direction in neighbors}
+        
+            for other_detection in frame_detections:
+                if tensor_equal(detection.bbox_norm, other_detection.bbox_norm):
+                    # We are at the current detection, so skip.
+                    continue
+            
+                distance, angle = calculate_vector(detection.bbox, other_detection.bbox)
+                direction = get_direction(angle)
+                
+                if distance < min_distances[direction]:
+                    min_distances[direction] = distance
+                    neighbors[direction] = other_detection
+            
+            detection.neighbors = neighbors
+            
+    def process_detection(self, new_detection: Detection):
+        # Check if the new detection matches any existing detection
+        for _, detection in self.detections.items():
+            
+            # Compare using neighbors
+            if new_detection == detection:
+                # Neighbors align. Update the existing detection with the new detection's bbox and bbox_norm.
+                detection.bbox = new_detection.bbox
+                detection.bbox_norm = new_detection.bbox_norm
+                detection.neighbors = new_detection.neighbors
+                # Update Kalman Filter with new measurement
+                detection.kalman_filter.update(new_detection.bbox_norm)
+                return
+
+        # If no match is found, initialize a new detection.
+        self.add(new_detection)
+    
+    def add(self, new_detection: Detection):
+        """Do not call this independently. Use `:meth: process_detection()` instead.
 
         Args:
-            database (list): A list containing all instances of detections.
+            new_detection (Detection): Detection geneated from a new frame.
         """
-        # Check spatial key to see if any detections are spatially close to the current detection instance.
-        # If so, add them to self.neighbors.
-        
-        for detection in database:
-            if self.is_neighbor(detection):
-                vector, distance, angle = self.calculate_vector(detection)
-                # Check to see if this detection is closer than a current neighbor. If so, replace the current neighbor.
-                for i, neighbor in enumerate(self.neighbors):
-                    if abs(neighbor['angle'] - angle) < math.radians(10) and distance < neighbor['distance']:
-                        self.neighbors[i] = {'id': detection.id, 'bbox': detection.bbox, 'vector': vector, 'distance': distance, 'angle': angle}
-                        break
-                else:
-                    # Loop wasn't broken, this neighbor doesn't replace an old neighbor.
-                    self.neighbors.append({'id': detection.id, 'bbox': detection.bbox, 'vector': vector, 'distance': distance, 'angle': angle})
-        
-        self.neighbors = sorted(self.neighbors, key=lambda neighbor: neighbor['distance'])
-        
-        # Now that neighbors have been found, assign an ID to the current detection instance.
-        self.assign_id(database)
+        new_detection.initialize_kalman(self.delta_t)
+        new_detection.id = self.next_id
+        self.detections[self.next_id] = new_detection
+        self.next_id += 1
     
+    def predict_detections(self):
+        for _, detection in self.detections.items():
+            if detection.kalman_filter is not None:
+                detection.kalman_filter.predict()
     
-    def is_neighbor(self, other: object):
-        """Determines if the current detection instance is spatially close to another detection instance.
-
-        Args:
-            other (object): Another detection instance.
-
-        Returns:
-            bool: True if the current detection instance is spatially close to another detection instance, False otherwise.
-        """
-        vector, distance, angle = self.calculate_vector(other)
-        # This is set to 100px for now, should be tuned more later.
+    # def update_detections(self, frame_detections: list[Detection]):
+    #     for new_detection in frame_detections:
+    #         is_match = False
+    #         for _, existing_detection in self.detections.items():
+    #             if new_detection == existing_detection:
+    #                 existing_detection.update(new_detection.bbox_norm)
+    #                 is_match = True
+    #                 break
+                
+    #             if not is_match:
+    #                 new_detection.initialize_kalman(self.delta_t)
+    #                 new_detection.id = self.next_id
+    #                 self.detections[self.next_id] = new_detection
+    #                 self.next_id += 1
+                    
+    # def add(self, new_detection: Detection):
         
-        # Neighbor decided by 2 rules: Distance and direction. A neighbor is direct, therefore only 1 neighbor could exist within a given distance and direction. 
-        # If a direction is the same as the current neighbor, but the distance is further, the detection is not a neighbor.
+    #     for _, detection in self.detections.items():
+    #         if new_detection == detection:
+    #             print("Found a match!")
+    #             detection.bbox = new_detection.bbox
+    #             detection.bbox_norm = new_detection.bbox_norm
+    #             detection.neighbors = new_detection.neighbors
+    #             return
         
-        # Check for existing neighbors, grab their angles for blacklist.
-        for neighbor in self.neighbors:
-            # If angle is within 10 degrees of another neighbor, and is farther away, it is not a neighbor.
-            if abs(neighbor['angle'] - angle) < math.radians(10) and distance > neighbor['distance']:
-                return False
-        return True
-    
-    def calculate_vector(self, other_detection):
-        """
-        Calculates the vector pointing from this detection to another detection.
-
-        Parameters:
-        other_detection (Detection): Another detection instance.
-
-        Returns:
-        tuple: A tuple representing the vector (dx, dy).
-        """
-        dx = other_detection.bbox[0] - self.bbox[0]
-        dy = other_detection.bbox[1] - self.bbox[1]
-        
-        vector = (dx, dy)
-        distance = (dx**2 + dy**2)**0.5
-        angle = math.atan2(dy, dx) # In radians
-        return (vector, distance, angle)
+    #     print("Generating new id")
+    #     new_detection.id = self.next_id
+    #     self.detections[self.next_id] = new_detection
+    #     self.next_id += 1
