@@ -40,22 +40,18 @@ class MightyMicros(QtWidgets.QMainWindow):
         # region [ Widgets ]
 
         # region [ Set up camera display ]
-        self.camera1 = cv2.VideoCapture(0)
+        self.camera1 = cv2.VideoCapture(1)
         self.timer1 = QtCore.QTimer(self)
         self.timer1.timeout.connect(self.updateFrame1)
         self.timer1.start(30)
 
-        self.camera2 = cv2.VideoCapture(1)
+        self.camera2 = cv2.VideoCapture(0)
         self.timer2 = QtCore.QTimer(self)
         self.timer2.timeout.connect(self.updateFrame2)
         self.timer2.start(30)
         # endregion
 
-        # region [Add combo box widget] 
-        self.videoCombo = QtWidgets.QComboBox(self.ui.frame_4)
-        self.ui.horizontalLayout_12.addWidget(self.videoCombo)
-
-        # endregion
+    
         # region [ Add widgets]
         self.mediaPlayer1 = QMediaPlayer(self.ui.frame_5, QMediaPlayer.VideoSurface)
         self.videoWidget1 = QVideoWidget()
@@ -77,6 +73,15 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.output2 = QtWidgets.QTextEdit(self.ui.ConFrame_2)
         self.output2.setObjectName("output2")
         self.ui.verticalLayout_7.addWidget(self.output2)
+
+        self.videoCombo = QtWidgets.QComboBox(self.ui.frame_4)
+        self.ui.horizontalLayout_12.addWidget(self.videoCombo)
+        
+        self.gridBtn = QtWidgets.QPushButton(self.ui.frame_4)
+        self.ui.horizontalLayout_12.addWidget(self.gridBtn)
+
+        self.popUp = PopUpWindow(self.output2, self)
+
 
         # endregion
 
@@ -143,6 +148,7 @@ class MightyMicros(QtWidgets.QMainWindow):
 
         
         self.ui.pushButton.clicked.connect(self.ClickBTN)
+        self.gridBtn.clicked.connect(self.gridPopUp)
         
         #self.Thread1 = Thread1(self.videoNumber, False)
         #self.Thread1.start()
@@ -179,7 +185,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.label_4.setText(_translate("MainWindow", ""))
         self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.RecordTab), _translate("MainWindow", "Camera Feeds"))
         self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_2), _translate("MainWindow", "Media Players"))
-
+        self.gridBtn.setText(_translate("MainWindow", "Grid Management"))
         # endregion
         
      
@@ -204,7 +210,7 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.Output1 = cv2.VideoWriter('video_recording_1_'+str(self.videoNumber)+'.mp4', self.Fourcc, 30, (640, 480))
 
          
-            self.Output2 = cv2.VideoWriter('video_recording_2_'+str(self.videoNumber)+'.mp4', self.Fourcc, 15, (640, 480))
+            self.Output2 = cv2.VideoWriter('video_recording_2_'+str(self.videoNumber)+'.mp4', self.Fourcc, 30, (640, 480))
 
 
             self.ThreadActive = True
@@ -325,14 +331,14 @@ class MightyMicros(QtWidgets.QMainWindow):
             #try: 
 
                 #for i, bbox in enumerate(results[0].boxes.xyxy):
-                 #   coord = results[0].boxes.xyxy[i].numpy()
-                  #  self.output1.append("Slice " + str(self.numSlices) + " at (" + str(coord[0]) + ", "+ str(coord[1]) + ") and (" + str(coord[2]) + ", "+str(coord[3]))
-                   # self.numSlices += 1
+                    #coord = results[0].boxes.xyxy[i].numpy()
+                    #self.output1.append("Slice " + str(self.numSlices) + " detected" )
+                    #self.numSlices += 1
                     #print(results[0].boxes.xyxy[i])
                     #print(str(results[0].boxes.xyxy[i][0]))
                 
             #except IndexError: 
-               # pass
+                #pass
 
             if self.isRecord == True: 
                 self.Thread1 = Thread1(self.videoNumber, self.frame1, self.Output1, self)
@@ -401,6 +407,15 @@ class MightyMicros(QtWidgets.QMainWindow):
 
             self.frame2 = frame
 
+
+    def gridPopUp(self):
+ 
+        if self.popUp.isVisible():
+            self.popUp.hide()
+
+        else:
+            self.popUp.show()
+
     
     def closeEvent(self, event: QtGui.QCloseEvent):
         """This method handles any cleanup when the application is about to quit.
@@ -423,4 +438,117 @@ class MightyMicros(QtWidgets.QMainWindow):
         super().closeEvent(event)
         
     # endregion
+
+#class for grid management pop up window 
+class PopUpWindow(QtWidgets.QWidget):
+   
+    def __init__(self, output2: QtWidgets.QTextEdit, parent = None):
+        super().__init__()
+        self.output2 = output2
+        self.gridNum = 0
+
+
+        
+
+        # region [Add Widgets]
+
+
+        vlayout = QtWidgets.QVBoxLayout()
+        #hlayout = QtWidgets.QHBoxLayout()
+        
+        #self.setLayout(hlayout)
+
+        self.labelGrid = QtWidgets.QLabel()
+        vlayout.addWidget(self.labelGrid)
+
+        self.gridSpinBox = QtWidgets.QSpinBox()
+        self.gridSpinBox.setMinimum(1)
+        vlayout.addWidget(self.gridSpinBox)
+
+        self.okBtn = QtWidgets.QPushButton()
+        vlayout.addWidget(self.okBtn)
+
+        self.missSlicesLabel = QtWidgets.QLabel()
+        vlayout.addWidget(self.missSlicesLabel)
+
+        self.yesBtn = QtWidgets.QPushButton()
+        vlayout.addWidget(self.yesBtn)
+        self.yesBtn.hide()
+
+        self.noBtn = QtWidgets.QPushButton()
+        vlayout.addWidget(self.noBtn)
+        self.noBtn.hide()
+
+        self.typeSlicesLabel = QtWidgets.QLabel()
+        vlayout.addWidget(self.typeSlicesLabel)
+        self.typeSlicesLabel.hide()
+
+        self.typeSlicesLineEdit= QtWidgets.QLineEdit()
+        vlayout.addWidget(self.typeSlicesLineEdit)
+        self.typeSlicesLineEdit.hide()
+
+        self.okBtn2 = QtWidgets.QPushButton()
+        vlayout.addWidget(self.okBtn2)
+        self.okBtn2.hide()
+
+        self.setLayout(vlayout)
+
+
+
+        
+
+        
+        # endregion
+
+        # region [ Set Text ]
+        self.labelGrid.setText("Enter grid number:")
+        self.okBtn.setText("Ok")
+        self.yesBtn.setText("Yes")
+        self.noBtn.setText("No")
+        self.okBtn2.setText("Ok")
+        self.typeSlicesLabel.setText("Type the numbers of the slices that were picked up on grid " + str(self.gridNum) + " separated by a comma (ex: 3, 4, 5).")
+
+        # endregion
+
+        # region [ Signals ]
+        self.okBtn.clicked.connect(self.clickOk)
+        self.yesBtn.clicked.connect(self.clickYes)
+        self.noBtn.clicked.connect(self.clickNo)
+        self.okBtn2.clicked.connect(self.clickOk2)
+        
+        
+        # endregion
+
+    def clickOk(self):
+        self.gridNum = self.gridSpinBox.value()
+
+        self.missSlicesLabel.setText("The following slices seem to be the slices picked up on the grid: 3, 4, 5. Is this correct?")
+        self.yesBtn.show()
+        self.noBtn.show()
+
+
+    def clickYes(self): 
+        self.output2.append("Slices 3, 4, and 5 picked up on Grid " + str(self.gridNum))
+        self.close()
+
+    def clickNo(self): 
+        self.typeSlicesLabel.show()
+        self.typeSlicesLineEdit.show()
+        self.okBtn2.show()
+
+    def clickOk2(self): 
+        self.sliceNums = self.typeSlicesLineEdit.text()
+        self.output2.append("Slices " + str(self.sliceNums) + " picked up on Grid " + str(self.gridNum))
+        self.close()
+        
+
+        
+
+
+
+
+
+        
+
+        
           
