@@ -129,9 +129,6 @@ class VideoThread(QThread):
                 elif self.camNum == 0: 
                     frame = cv2.resize(frame, (640, 480))
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-             
-
-
                 
                     qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
 

@@ -207,7 +207,7 @@ class MightyMicros(QtWidgets.QMainWindow):
                 videoThread1.start()
                 self.videoThreads.append(videoThread1)
 
-            if index == 1: 
+            elif index == 1: 
                 videoThread1.frameSignal.connect(self.ImageUpdateSlot2)
                 videoThread1.start()
                 self.videoThreads.append(videoThread1)
