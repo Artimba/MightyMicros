@@ -91,28 +91,93 @@ class Thread2(QThread):
         self.quit()
 
 
-#thread class to run model on frames
-class Thread3(QThread):
-    frame_edit = pyqtSignal(QImage)
 
-    def __init__(self, frame: np.ndarray, parent = None):
-        super(Thread3, self).__init__(parent)
-        self.frame = frame
-        self.weights_path = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
-        self.model = Model(self.weights_path)
         
+class VideoThread(QThread):
+    frameSignal = pyqtSignal(QImage)
+    def __init__(self, camNum: int):
+        super().__init__()
+        self.camNum = camNum
+        self.weightsPath = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
+        self.model = Model(self.weightsPath)
+       
+        self.threadActive = True
 
     def run(self):
+        camera = cv2.VideoCapture(self.camNum) 
         
-        results = self.model.predict(self.frame)
-        annotated_frame = results[0].plot(labels=False, masks=False)
-        qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888)
-        qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio)
         
-        self.frame_edit.emit(qt_frame)
+
+        while self.threadActive:  
+            ret, frame = camera.read() #get frame from video feed
+            if ret:
+
+                if self.camNum == 1: 
+
+                    frame = cv2.resize(frame, (640, 480))
+                    results = self.model.predict(frame)
+                    annotated_frame = results[0].plot(labels=False, masks=False)
+
+                    annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB) #get color image from feed
+
+                
+                    qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
+
+                    qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
+                    self.frameSignal.emit(qt_frame)
+
+                elif self.camNum == 0: 
+                    frame = cv2.resize(frame, (640, 480))
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+             
+
+
+                
+                    qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
+
+                    qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
+                    self.frameSignal.emit(qt_frame)
+
+
+
+                
+        camera.release()
 
     def stop(self):
-        self.quit()
+        self.threadActive = False
+        self.wait()    
+                    
 
+                
+
+                
+
+                #try: 
+
+                    #for i, bbox in enumerate(results[0].boxes.xyxy):
+                        #coord = results[0].boxes.xyxy[i].numpy()
+                        #self.output1.append("Slice " + str(self.numSlices) + " detected" )
+                        #self.numSlices += 1
+                        #print(results[0].boxes.xyxy[i])
+                        #print(str(results[0].boxes.xyxy[i][0]))
+                    
+                #except IndexError: 
+                    #pass
+
+              
+
+                    
+
+
+            
+                    
+
+                    
+                #qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
+                #qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
+                
+                #qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
 
         
+
+
