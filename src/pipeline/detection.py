@@ -3,7 +3,7 @@ from typing import Optional
 from ultralytics.engine.results import Boxes
 from numpy import ndarray, linalg
 from math import atan2, hypot
-from cv2 import rectangle, putText, FONT_HERSHEY_SIMPLEX, getTextSize
+from cv2 import rectangle, putText, FONT_HERSHEY_SIMPLEX, line, getTextSize
 from torch import equal as tensor_equal
 from torch import Tensor
 
@@ -113,30 +113,37 @@ class DetectionManager:
         for detection in frame_detections:
             self.add(detection)
         
-        color_1 = (0, 255, 0)
-        color_2 = (255, 0, 0)
+        green = (0, 255, 0)
+        blue = (255, 0, 0)
         thickness = 2
+        font_scale = 0.5
 
         # Update frame with bboxes that have ids overlayed (inside the bbox).
         for detection in self.detections.values():
-            text = str(detection.id)
-            x1, y1, x2, y2 = [int(coord) for coord in detection.bbox]  # Ensure you're using detection.bbox
-            bbox_height = y2 - y1
+            bbox = detection.bbox
+            x1, y1, x2, y2 = [int(coord) for coord in bbox]
+            rectangle(frame, (x1, y1), (x2, y2), color=green, thickness=thickness)  # Draw bbox
+            
+            label_size, _ = getTextSize(str(detection.id), FONT_HERSHEY_SIMPLEX, font_scale, thickness)
 
-            # Set the font size as a proportion of the bounding box height
-            font_scale = bbox_height / 25  # The denominator controls the text size proportion
+            # Label position (bottom right corner of bbox)
+            label_x = x2 + 15
+            label_y = y2
 
-            # Calculate the starting coordinates for the text to center it
-            text_size, _ = getTextSize(text, FONT_HERSHEY_SIMPLEX, font_scale, thickness)
-            text_x = x1 + (x2 - x1 - text_size[0]) // 2
-            text_y = y1 + (y2 - y1 + text_size[1]) // 2
+            # Check if label would go beyond the frame dimensions
+            if label_x + label_size[0] > frame.shape[1]:
+                label_x = frame.shape[1] - label_size[0] - 5
+            if label_y - label_size[1] < 0:
+                label_y = label_size[1] + 5
 
-            # Draw rectangle around the object
-            rectangle(frame, (x1, y1), (x2, y2), color_1, thickness)
+            # Draw leader line from bbox to text
+            line_end_x = label_x if label_x == x2 + 5 else x2
+            line_end_y = label_y - label_size[1] // 2
+            lineThickness = 2
+            line(frame, (x2, y2), (line_end_x, line_end_y), blue, lineThickness)
 
-            # Put the text on the frame, adjust y position to compensate for baseline
-            baseline = text_size[1] // 3
-            putText(frame, text, (text_x, text_y - baseline), FONT_HERSHEY_SIMPLEX, font_scale, color_2, thickness)
+            # Draw text label
+            putText(frame, str(detection.id), (label_x, label_y), FONT_HERSHEY_SIMPLEX, font_scale, blue, thickness)
 
 
         

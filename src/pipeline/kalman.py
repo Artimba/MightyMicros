@@ -97,10 +97,7 @@ class KalmanFilter(object):
     def calculate_centroid(self, bbox: Tensor):
         # bbox can either be normalized or not for this, doesn't matter. HOWEVER, the rest of the code assumes normalized bboxes.
         
-        if bbox.is_cuda:
-            bbox = bbox.cpu()
-        
-        x1, y1, x2, y2 = bbox[:4].numpy()
+        x1, y1, x2, y2 = [int(coord) for coord in bbox]
         centroid = np.array([(x1 + x2) / 2, (y1 + y2) / 2])
         return centroid
 

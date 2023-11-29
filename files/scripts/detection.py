@@ -7,24 +7,23 @@ from ultralytics import YOLO
 
 from src.pipeline.model import Model
 
-# Load the YOLOv8 model
-model = Model('runs/detect/train4/weights/best.pt')
 
-# Open the video file
+model = Model('runs/detect/train4/weights/best.pt')
 video_path = "data/20231017_120545.mp4"
 cap = cv2.VideoCapture(video_path)
 
-# Loop through the video frames
 while cap.isOpened():
     # Read a frame from the video
     success, frame = cap.read()
 
     if success:
-        # Run YOLOv8 inference on the frame
+        cv2.namedWindow('YOLOv8 Inference', cv2.WINDOW_NORMAL)
+        desired_width = 1920
+        desired_height = 1080
+        cv2.resizeWindow('YOLOv8 Inference', desired_width, desired_height)
         frame = model.predict(frame)
         print("Detections:", len(model.manager.detections))
 
-        # Display the annotated frame
         cv2.imshow("YOLOv8 Inference", frame)
 
         key = cv2.waitKey(0)  # Wait indefinitely for a key press
