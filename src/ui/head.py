@@ -239,7 +239,7 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.Output2 = cv2.VideoWriter('video_recording_2_'+str(self.videoNumber)+'.mp4', self.Fourcc, 30, (640, 480))
 
 
-            self.ThreadActive = True
+            
 
             self.isRecord = True
             

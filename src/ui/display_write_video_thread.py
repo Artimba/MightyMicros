@@ -115,6 +115,7 @@ class VideoThread(QThread):
                 if self.camNum == 1: 
 
                     frame = cv2.resize(frame, (640, 480))
+                    #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     results = self.model.predict(frame)
                     annotated_frame = results[0].plot(labels=False, masks=False)
 
@@ -122,6 +123,7 @@ class VideoThread(QThread):
 
                 
                     qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
+                    #qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
 
                     qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
                     self.frameSignal.emit(qt_frame)
