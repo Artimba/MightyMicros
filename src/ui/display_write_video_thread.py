@@ -179,4 +179,87 @@ class VideoThread(QThread):
 
         
 
+class VideoThread2(QThread):
+    frameSignal = pyqtSignal(QImage)
+    def __init__(self):
+        super().__init__()
+        self.weightsPath = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
+        self.model = Model(self.weightsPath)
+       
+        self.threadActive = True
 
+    def run(self):
+        camera = cv2.VideoCapture(1) 
+        
+        
+
+        while self.threadActive:  
+            ret, frame = camera.read() #get frame from video feed
+            if ret:
+
+                
+
+                frame = cv2.resize(frame, (640, 480))
+                #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                results = self.model.predict(frame)
+                annotated_frame = results[0].plot(labels=False, masks=False)
+
+                annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB) #get color image from feed
+
+            
+                qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
+                #qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
+
+                qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
+                self.frameSignal.emit(qt_frame)
+
+
+                
+        camera.release()
+
+    def stop(self):
+        self.threadActive = False
+        self.wait()
+
+
+class VideoThread1(QThread):
+    frameSignal = pyqtSignal(QImage)
+    def __init__(self):
+        super().__init__()
+        #self.weightsPath = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
+        #self.model = Model(self.weightsPath)
+       
+        self.threadActive = True
+
+    def run(self):
+        camera = cv2.VideoCapture(0) 
+        
+        
+
+        while self.threadActive:  
+            ret, frame = camera.read() #get frame from video feed
+            if ret:
+
+                
+
+                frame = cv2.resize(frame, (640, 480))
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                #results = self.model.predict(frame)
+                #annotated_frame = results[0].plot(labels=False, masks=False)
+
+                #annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB) #get color image from feed
+
+            
+                #qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
+                qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
+
+                qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
+                self.frameSignal.emit(qt_frame)
+
+
+                
+        camera.release()
+
+    def stop(self):
+        self.threadActive = False
+        self.wait()

@@ -9,7 +9,7 @@ import cv2
 
 
 from src.ui.main_ui import Ui_MainWindow
-from src.ui.display_write_video_thread import VideoThread
+from src.ui.display_write_video_thread import VideoThread1, VideoThread2
 from src import PROJECT_ROOT
 from src.pipeline.detection import Model
 
@@ -28,8 +28,11 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.videoThreads = []
-        self.startVideoThreads()
+        #self.videoThreads = []
+
+        self.videoThreads1 = []
+        self.videoThreads2 = []
+        
         
 
         # Change/add any property about ui here
@@ -82,6 +85,14 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         self.gridBtn = QtWidgets.QPushButton(self.ui.frame_4)
         self.ui.horizontalLayout_12.addWidget(self.gridBtn)
+
+        self.threadBtn1 = QtWidgets.QPushButton(self.ui.CamLabFrame)
+        self.ui.horizontalLayout_7.addWidget(self.threadBtn1)
+
+        self.threadBtn2 = QtWidgets.QPushButton(self.ui.CamLabFrame)
+        self.ui.horizontalLayout_7.addWidget(self.threadBtn2)
+
+       
 
         self.popUp = PopUpWindow(self.output2, self)
 
@@ -178,6 +189,9 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.mediaPlayer2.durationChanged.connect(self.durationChanged2)
 
         self.videoCombo.currentTextChanged.connect(self.comboBoxChanged)
+
+        self.threadBtn1.clicked.connect(self.startVideoThread1)
+        self.threadBtn2.clicked.connect(self.startVideoThread2)
         # endregion
         
         # region [ Translation ]
@@ -189,28 +203,49 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.RecordTab), _translate("MainWindow", "Camera Feeds"))
         self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_2), _translate("MainWindow", "Media Players"))
         self.gridBtn.setText(_translate("MainWindow", "Grid Management"))
+        self.threadBtn1.setText(_translate("MainWindow", "Show Mighty Micros Camera"))
+        self.threadBtn2.setText(_translate("MainWindow", "Show Microtome Camera"))
+
         # endregion
         
      
    
     # region [ Methods ]
-    def startVideoThreads(self):
+    # def startVideoThreads(self):
+    #     # Manage unique integers for threads
+    #     indices = [0, 1]
+
+    #     for index in indices: 
+    #         videoThread1 = VideoThread(index)
+
+    #         if index == 0: 
+
+    #             videoThread1.frameSignal.connect(self.ImageUpdateSlot1)
+    #             videoThread1.start()
+    #             self.videoThreads.append(videoThread1)
+
+    #         elif index == 1: 
+    #             videoThread1.frameSignal.connect(self.ImageUpdateSlot2)
+    #             videoThread1.start()
+    #             self.videoThreads.append(videoThread1)
+
+    def startVideoThread1(self):
         # Manage unique integers for threads
-        indices = [0, 1]
 
-        for index in indices: 
-            videoThread1 = VideoThread(index)
 
-            if index == 0: 
+   
+        videoThread1 = VideoThread1()
+        videoThread1.frameSignal.connect(self.ImageUpdateSlot1)
+        videoThread1.start()
+        self.videoThreads1.append(videoThread1)
+    
+    def startVideoThread2(self):
+        # Manage unique integers for threads
+        videoThread2 = VideoThread2()
+        videoThread2.frameSignal.connect(self.ImageUpdateSlot2)
+        videoThread2.start()
+        self.videoThreads1.append(videoThread2)
 
-                videoThread1.frameSignal.connect(self.ImageUpdateSlot1)
-                videoThread1.start()
-                self.videoThreads.append(videoThread1)
-
-            elif index == 1: 
-                videoThread1.frameSignal.connect(self.ImageUpdateSlot2)
-                videoThread1.start()
-                self.videoThreads.append(videoThread1)
 
             
         
@@ -449,7 +484,10 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         i.e closing files, releasing threads. 
         """
-        for i, thread in enumerate(self.videoThreads): 
+        for i, thread in enumerate(self.videoThreads1): 
+            print(f"stopping video capture {i}")
+            thread.stop()
+        for i, thread in enumerate(self.videoThreads2): 
             print(f"stopping video capture {i}")
             thread.stop()
             
