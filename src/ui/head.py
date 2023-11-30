@@ -9,9 +9,16 @@ import cv2
 
 
 from src.ui.main_ui import Ui_MainWindow
-from src.ui.display_write_video_thread import VideoThread1, VideoThread2
+from src.ui.display_write_video_thread import CameraThread, ProcessingThread, RecordingThread
 from src import PROJECT_ROOT
 from src.pipeline.detection import Model
+
+import logging
+
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('YOLO_Detection')
+
 
 #sources: 
 #https://www.youtube.com/watch?v=a6_5vkxLwAw&t=1485s
@@ -28,12 +35,9 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        #self.videoThreads = []
-
-        self.videoThreads1 = []
-        self.videoThreads2 = []
-        
-        
+        self.camera_threads = []
+        self.camera_index = 0
+        self.temp_data = ['data/20231017_120545.mp4', 'data/20231017_122937.mp4']
 
         # Change/add any property about ui here
         self.videoNumber = 1
@@ -190,8 +194,8 @@ class MightyMicros(QtWidgets.QMainWindow):
 
         self.videoCombo.currentTextChanged.connect(self.comboBoxChanged)
 
-        self.threadBtn1.clicked.connect(self.startVideoThread1)
-        self.threadBtn2.clicked.connect(self.startVideoThread2)
+        self.threadBtn1.clicked.connect(self.InitializeCamera)
+        self.threadBtn2.clicked.connect(self.InitializeCamera)
         # endregion
         
         # region [ Translation ]
@@ -229,80 +233,57 @@ class MightyMicros(QtWidgets.QMainWindow):
     #             videoThread1.start()
     #             self.videoThreads.append(videoThread1)
 
-    def startVideoThread1(self):
+    def InitializeCamera(self):
         # Manage unique integers for threads
-
-
-   
-        videoThread1 = VideoThread1()
-        videoThread1.frameSignal.connect(self.ImageUpdateSlot1)
-        videoThread1.start()
-        self.videoThreads1.append(videoThread1)
-    
-    def startVideoThread2(self):
-        # Manage unique integers for threads
-        videoThread2 = VideoThread2()
-        videoThread2.frameSignal.connect(self.ImageUpdateSlot2)
-        videoThread2.start()
-        self.videoThreads1.append(videoThread2)
-
-
-            
         
-
-
-
-    def ImageUpdateSlot1(self, Image): 
-        self.ui.label_3.setPixmap(QtGui.QPixmap.fromImage(Image)) 
-
-    def ImageUpdateSlot2(self, Image): 
-        self.ui.label_4.setPixmap(QtGui.QPixmap.fromImage(Image)) 
+        if self.camera_index == 0:
+            self.ui.label_3.setText("Loading...")
+        elif self.camera_index == 1:
+            self.ui.label_4.setText("Loading...")
+        
+        
+        logger.info(f"Initializing Camera {self.camera_index}")
+        camera_thread = CameraThread(self.temp_data[self.camera_index])
+        
+        processing_thread = ProcessingThread()
+        recording_thread = RecordingThread()
+        
+        camera_thread.raw_frame_signal.connect(processing_thread.process_frame)
+        processing_thread.annotated_frame_signal.connect(lambda image, idx=self.camera_index: self.UpdatePixmap(image, idx))
+        processing_thread.frame_for_recording_signal.connect(recording_thread.record_frame)
+        
+        camera_thread.start()
+        processing_thread.start()
+        recording_thread.start()
+        
+        self.camera_index += 1
+        self.camera_threads.append((camera_thread, processing_thread, recording_thread))
+    
+    def UpdatePixmap(self, Image: QtGui.QImage, camera_index: int):
+        if isinstance(camera_index, int) == False:
+            logger.info(f"UpdatePixmap called with invalid camera_thread argument, camera_thread is type: {type(camera_index)}. Expected type: int")
+        
+        if camera_index == 0:
+            self.ui.label_3.setPixmap(QtGui.QPixmap.fromImage(Image))
+        elif camera_index == 1:
+            self.ui.label_4.setPixmap(QtGui.QPixmap.fromImage(Image))
 
     def ClickBTN(self):
-        
-        if self.timer.isActive() == False:
+        if self.isRecord == False:
             self.ui.pushButton.setText("Stop Recording")  
             self.timer.start() #start the timer
-
-            #start writing the video
-
-
-            self.Fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            self.Output1 = cv2.VideoWriter('video_recording_1_'+str(self.videoNumber)+'.mp4', self.Fourcc, 30, (640, 480))
-
-         
-            self.Output2 = cv2.VideoWriter('video_recording_2_'+str(self.videoNumber)+'.mp4', self.Fourcc, 30, (640, 480))
-
-
-            
-
+            for idx, (_, _, recording_thread) in enumerate(self.camera_threads, start=1):
+                recording_thread.start_recording(idx, self.videoNumber)
+                self.videoNumber += 1
             self.isRecord = True
-            
-            #self.Thread2 = Thread2(self.videoNumber, self.frame2, self)
-            #self.Thread2.start() 
-
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Started")
-            
-        else: 
-
+        else:
             self.ui.pushButton.setText("Start Recording")
-            self.timer.stop() 
+            self.timer.stop()
+            [recording_thread.stop_recording() for _, _, recording_thread in self.camera_threads]
             self.isRecord = False
-            #self.Thread1.stop()
-            #self.Thread2.stop()
-            self.Output1.release()
-            self.Output2.release()
-
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Stopped")
-            self.videoCombo.addItem('Video ' + str(self.videoNumber))
             self.videoNumber += 1
-
-            #load video to media player
-            
-            # TODO: Hard-coded paths are bad for maintainability. Use relative path instead (see what I did inside display_write_video_thread), or prompt for file path. See https://stackoverflow.com/questions/7165749/open-file-dialog-in-pyqt
-            #filename = 'video_recording.mp4'
-            #self.mediaPlayer.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(filename)))
-            #self.ui.pushButton_2.setEnabled(True)
 
     #function to change button text 
     def mediaStateChange1(self, state): 
@@ -327,9 +308,6 @@ class MightyMicros(QtWidgets.QMainWindow):
         else: 
             self.mediaPlayer1.play()
     
-    
-
-
     #function to change button text 
     def mediaStateChange2(self, state): 
         if self.mediaPlayer2.state() == QMediaPlayer.PlayingState: 
@@ -353,8 +331,6 @@ class MightyMicros(QtWidgets.QMainWindow):
         else: 
             self.mediaPlayer2.play()
 
-    
-    
     #function to load both videos into media player when the combo box value is changed 
     def comboBoxChanged(self, value): 
         QtTest.QTest.qWait(1000)
@@ -371,105 +347,6 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.pushButton_2.setEnabled(True)
         self.ui.pushButton_5.setEnabled(True)
 
-    # def updateFrame1(self):
-    
-    #     ret, frame = self.camera1.read() #get frame from video feed
-
-    #     #weights_path = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
-
-    #     #self.model = Model(weights_path)
-        
-    #     if ret: 
-    #         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #get color image from feed
-    #         frame = cv2.resize(frame, (640, 480))
-                
-
-    #         #results = self.model.predict(frame)
-                
-    #         #annotated_frame = results[0].plot(labels=False, masks=False)
-
-            
-
-    #         #try: 
-
-    #             #for i, bbox in enumerate(results[0].boxes.xyxy):
-    #                 #coord = results[0].boxes.xyxy[i].numpy()
-    #                 #self.output1.append("Slice " + str(self.numSlices) + " detected" )
-    #                 #self.numSlices += 1
-    #                 #print(results[0].boxes.xyxy[i])
-    #                 #print(str(results[0].boxes.xyxy[i][0]))
-                
-    #         #except IndexError: 
-    #             #pass
-
-    #         if self.isRecord == True: 
-    #             self.Thread1 = Thread1(self.videoNumber, self.frame1, self.Output1, self)
-
-    #             self.Thread1.start()
-
-    #             QtTest.QTest.qWait(1)
-    #             self.Thread1.stop()
-
-
-        
-                
-
-                
-    #         qt_frame = QtGui.QImage(frame.data, frame.shape[1], frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
-    #         #qt_frame = QtGui.QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
-            
-    #         qt_frame = qt_frame.scaled(640, 480, QtCore.Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
-
-    #         #run thread3 here 
-    #         #self.Thread3 = Thread3(frame, self)
-    #         #self.Thread3.start()
-
-    #         #QtTest.QTest.qWait(1000)
-
-
-    #         #self.ImageUpdateSlot1(self.Thread3.frame_edit)
-    #         self.ImageUpdateSlot1(qt_frame)
-    #         #self.Thread3.stop()
-
-    #         #self.frame1 = annotated_frame
-    #         self.frame1 = frame
-
-        
-    
-    # def updateFrame2(self):
-    #     ret, frame = self.camera2.read() #get frame from video feed
-
-    #     #weights_path = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
-
-    #     #self.model = Model(weights_path)
-        
-    #     if ret: 
-    #         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #get color image from feed
-    #         frame = cv2.resize(frame, (640, 480))
-                
-        
-    #         #results = self.model.predict(frame)
-                
-    #         #annotated_frame = results[0].plot(labels=False, masks=False)
-
-    #         if self.isRecord == True: 
-    #             self.Thread2 = Thread1(self.videoNumber, self.frame2, self.Output2, self)
-
-    #             self.Thread2.start()
-
-    #             QtTest.QTest.qWait(1)
-    #             self.Thread2.stop()
-                
-    #         qt_frame = QtGui.QImage(frame.data, frame.shape[1], frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
-    #         #qt_frame = QtGui.QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
-            
-    #         qt_frame = qt_frame.scaled(640, 480, QtCore.Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
-
-    #         self.ImageUpdateSlot2(qt_frame)
-
-    #         self.frame2 = frame
-
-
     def gridPopUp(self):
  
         if self.popUp.isVisible():
@@ -484,22 +361,15 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         i.e closing files, releasing threads. 
         """
-        for i, thread in enumerate(self.videoThreads1): 
-            print(f"stopping video capture {i}")
-            thread.stop()
-        for i, thread in enumerate(self.videoThreads2): 
-            print(f"stopping video capture {i}")
-            thread.stop()
-            
-        # if self.Thread1.isRunning():
-        #     print("Stopping VideoCapture Thread")
-        #     self.Thread1.stop()
-        #     self.Thread1.wait()
-
-        # if self.Thread2.isRunning(): 
-        #     print("Stopping VideoCapture Thread")
-        #     self.Thread2.stop()
-        #     self.Thread2.wait()
+        
+        for camera_thread, processing_thread, recording_thread in self.camera_threads:
+            print(f"Stopping Camera {camera_thread.camera_index}")
+            camera_thread.stop()
+            camera_thread.wait()
+            processing_thread.stop()
+            processing_thread.wait()
+            recording_thread.stop()
+            recording_thread.wait()
         
         print("Closing application")
         # Pass the event back to the normal handler to close the window.
@@ -610,13 +480,4 @@ class PopUpWindow(QtWidgets.QWidget):
         self.close()
         
 
-        
 
-
-
-
-
-        
-
-        
-          

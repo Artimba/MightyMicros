@@ -6,14 +6,19 @@ from PyQt5.QtMultimediaWidgets import *
 from PyQt5.QtMultimedia import *
 import cv2
 import numpy as np
-from sys import settrace
-
+from sys import settrace, stdout, stderr
+import queue
 
 from src import PROJECT_ROOT
 from src.pipeline.detection import Model
+# from src.entry import StreamToLogger
 
 
+import logging
 
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('YOLO_Detection')
 
 
 def my_tracer(frame, event, arg = None): 
@@ -30,236 +35,107 @@ def my_tracer(frame, event, arg = None):
   
     return my_tracer
 
-#settrace(my_tracer)
-
-#class for a thread to display video and write video to a file 
-class Thread1(QThread):
+class CameraThread(QThread):
+    raw_frame_signal = pyqtSignal(np.ndarray)
     
-
-    def __init__(self, videoNumber: int, frame: np.ndarray, output: cv2.VideoWriter, parent = None):
-        super(Thread1, self).__init__(parent)
-        self.videoNumber = videoNumber
-        self.ThreadActive = True 
-        self.Output = output
-        
-        self.frame = frame
-
-    def run(self):
-        
-        # This is used over just a string for OS interoperability
-        
-        
-
-        while self.ThreadActive: 
-            frame1 = cv2.cvtColor(self.frame, cv2.COLOR_RGB2BGR)
-            self.Output.write(frame1)
-       
-
-    def stop(self):
-        self.ThreadActive = False
-        #self.Output.release()
-        self.quit()
-        
-#class for a thread to display video and write video to a file 
-#recording the camera feed that is on the right hand side is not working for some reason 
-class Thread2(QThread):
-
-    def __init__(self, videoNumber: int, frame: np.ndarray, output: cv2.VideoWriter, parent = None):
-        super(Thread2, self).__init__(parent)
-        self.videoNumber = videoNumber
-        self.ThreadActive = True #- see if commenting this out works
-        self.Output = output
-        self.frame = frame
-
-    def run(self):
-        
-        # This is used over just a string for OS interoperability
-    
-        
-
-        while self.ThreadActive: 
-
-                   
-            frame2 = cv2.cvtColor(self.frame, cv2.COLOR_RGB2BGR)
-            self.Output.write(frame2)
-    
-
-
-    def stop(self):
-        self.ThreadActive = False
-        #self.Output.release()
-        self.quit()
-
-
-
-        
-class VideoThread(QThread):
-    frameSignal = pyqtSignal(QImage)
-    def __init__(self, camNum: int):
+    def __init__(self, camera_index: int, parent=None):
         super().__init__()
-        self.camNum = camNum
-        self.weightsPath = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
-        self.model = Model(self.weightsPath)
-       
-        self.threadActive = True
-
+        self.camera = cv2.VideoCapture(camera_index)
+        self.camera_index = camera_index
+        self.thread_active = True
+        self.setObjectName(f"CameraThread_{camera_index}")
+        logger.info(f'CameraThread initialized with camera index {self.camera_index}')
+        
     def run(self):
-        camera = cv2.VideoCapture(self.camNum) 
-        
-        
-
-        while self.threadActive:  
-            ret, frame = camera.read() #get frame from video feed
-            if ret:
-
-                if self.camNum == 1: 
-
-                    frame = cv2.resize(frame, (640, 480))
-                    #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    results = self.model.predict(frame)
-                    annotated_frame = results[0].plot(labels=False, masks=False)
-
-                    annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB) #get color image from feed
-
-                
-                    qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
-                    #qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
-
-                    qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
-                    self.frameSignal.emit(qt_frame)
-
-                elif self.camNum == 0: 
-                    frame = cv2.resize(frame, (640, 480))
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                
-                    qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
-
-                    qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
-                    self.frameSignal.emit(qt_frame)
-
-
-
-                
-        camera.release()
-
-    def stop(self):
-        self.threadActive = False
-        self.wait()    
-                    
-
-                
-
-                
-
-                #try: 
-
-                    #for i, bbox in enumerate(results[0].boxes.xyxy):
-                        #coord = results[0].boxes.xyxy[i].numpy()
-                        #self.output1.append("Slice " + str(self.numSlices) + " detected" )
-                        #self.numSlices += 1
-                        #print(results[0].boxes.xyxy[i])
-                        #print(str(results[0].boxes.xyxy[i][0]))
-                    
-                #except IndexError: 
-                    #pass
-
-              
-
-                    
-
-
-            
-                    
-
-                    
-                #qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
-                #qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QtGui.QImage.Format.Format_RGB888) #convert to a format that qt can read 
-                
-                #qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
-
-        
-
-class VideoThread2(QThread):
-    frameSignal = pyqtSignal(QImage)
-    def __init__(self):
-        super().__init__()
-        self.weightsPath = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
-        self.model = Model(self.weightsPath)
-       
-        self.threadActive = True
-
-    def run(self):
-        camera = cv2.VideoCapture(1) 
-        
-        
-
-        while self.threadActive:  
-            ret, frame = camera.read() #get frame from video feed
-            if ret:
-
-                
-
+        logging.info(f'CameraThread running')
+        while self.thread_active:
+            success, frame = self.camera.read()
+            if success:
                 frame = cv2.resize(frame, (640, 480))
-                #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                results = self.model.predict(frame)
-                annotated_frame = results[0].plot(labels=False, masks=False)
-
-                annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB) #get color image from feed
-
-            
-                qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
-                #qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
-
-                qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
-                self.frameSignal.emit(qt_frame)
-
-
-                
-        camera.release()
-
+                self.raw_frame_signal.emit(frame)
+    
     def stop(self):
-        self.threadActive = False
+        self.thread_active = False
+        self.camera.release()
+        self.quit()
         self.wait()
 
+class ProcessingThread(QThread):
+    annotated_frame_signal = pyqtSignal(QImage)
+    frame_for_recording_signal = pyqtSignal(np.ndarray)
 
-class VideoThread1(QThread):
-    frameSignal = pyqtSignal(QImage)
-    def __init__(self):
-        super().__init__()
-        #self.weightsPath = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
-        #self.model = Model(self.weightsPath)
-       
-        self.threadActive = True
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.model = Model(os.path.join(PROJECT_ROOT, 'pipeline', 'runs/detect/train4/weights/best.pt'))
+        self.frame_queue = queue.Queue()
+        self.thread_active = True
+        self.setObjectName("ProcessingThread")
+        logger.info('ProcessingThread initialized')
 
     def run(self):
-        camera = cv2.VideoCapture(0) 
-        
-        
+        logging.info(f'ProcessingThread running')
+        while self.thread_active:
+            if not self.frame_queue.empty():
+                frame = self.frame_queue.get()
+                annotated_frame = self.model.predict(frame)[0].plot(labels=False, masks=False)
+                self.frame_for_recording_signal.emit(annotated_frame)
+                annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
+                qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888)
+                qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio)
+                self.annotated_frame_signal.emit(qt_frame)
 
-        while self.threadActive:  
-            ret, frame = camera.read() #get frame from video feed
-            if ret:
-
-                
-
-                frame = cv2.resize(frame, (640, 480))
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                #results = self.model.predict(frame)
-                #annotated_frame = results[0].plot(labels=False, masks=False)
-
-                #annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB) #get color image from feed
-
-            
-                #qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
-                qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
-
-                qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
-                self.frameSignal.emit(qt_frame)
-
-
-                
-        camera.release()
+    @pyqtSlot(np.ndarray)
+    def process_frame(self, frame: np.ndarray):
+        self.frame_queue.put(frame)
 
     def stop(self):
-        self.threadActive = False
+        self.thread_active = False
+        self.quit()
+        self.wait()
+
+class RecordingThread(QThread):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("RecordingThread")
+        self.frame_queue = queue.Queue()
+        self.video_writer = None
+        self.is_recording = False
+        self.thread_active = True
+        logger.info('RecordingThread initialized')
+
+    def run(self):
+        logging.info(f'RecordingThread running')
+        while self.thread_active:
+            logger.info(len(self.frame_queue.queue))
+            if not self.frame_queue.empty() and self.is_recording and self.video_writer is not None:
+                logger.info("LAG?")
+                frame = self.frame_queue.get()           
+                self.video_writer.write(frame)
+
+
+    @pyqtSlot(np.ndarray)
+    def record_frame(self, frame: np.ndarray):
+        if self.is_recording:
+            self.frame_queue.put(frame)
+
+    def start_recording(self, camera_idx: int, video_number: int):
+        logger.info("RecordingThread starting recording")
+        if not self.is_recording:
+            self.is_recording = True
+            self.video_writer = cv2.VideoWriter(f'video_recording_{camera_idx}_{video_number}.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 30, (640, 480))
+            
+    def stop_recording(self):
+        logger.info("RecordingThread stopping recording")
+        if self.is_recording:
+            self.is_recording = False
+            self.video_writer.release()
+            self.video_writer = None
+
+    def stop(self):
+        self.thread_active = False
+        try:
+            self.video_writer.release()
+        except AttributeError:
+            pass
+        self.quit()
         self.wait()
