@@ -73,7 +73,7 @@ class ProcessingThread(QThread):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.model = Model(os.path.join(PROJECT_ROOT, 'pipeline', 'runs/detect/train4/weights/best.pt'))
+        self.model = Model(os.path.join(PROJECT_ROOT, 'pipeline', 'runs/detect/train3/weights/best.pt'))
         self.frame_queue = queue.Queue()
         self.thread_active = True
         self.video_writer = None

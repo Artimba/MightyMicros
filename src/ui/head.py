@@ -37,7 +37,7 @@ class MightyMicros(QtWidgets.QMainWindow):
 
         self.video_threads = []
         self.camera_index = 0
-        self.temp_data = ['data/20231017_120545.mp4', 'data/20231017_122937.mp4']
+        self.temp_data = [0, 1]
 
         # Change/add any property about ui here
         self.videoNumber = 1
@@ -273,7 +273,6 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.timer.start() #start the timer
             for idx, (_, processing_thread) in enumerate(self.video_threads, start=1):
                 processing_thread.start_recording(idx, self.videoNumber)
-                self.videoNumber += 1
             self.isRecord = True
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Started")
         else:
