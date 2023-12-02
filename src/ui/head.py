@@ -9,7 +9,7 @@ import cv2
 
 
 from src.ui.main_ui import Ui_MainWindow
-from src.ui.display_write_video_thread import CameraThread, ProcessingThread
+from src.ui.display_write_video_thread import VideoThread
 from src import PROJECT_ROOT
 from src.pipeline.detection import Model
 
@@ -240,23 +240,22 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.ui.label_3.setText("Loading...")
         elif self.camera_index == 1:
             self.ui.label_4.setText("Loading...")
+        elif self.camera_index >= 2:
+            # TODO: This is a stopgap since we aren't asking user for camera index. We should be asking for index, not assuming.
+            self.video_threads[0].stop()
+            self.camera_index = 0
         
         
         logger.info(f"Initializing Camera {self.camera_index}")
-        camera_thread = CameraThread(self.temp_data[self.camera_index])
+        camera_thread = VideoThread(self.temp_data[self.camera_index])
         
-        processing_thread = ProcessingThread()
-        
-        camera_thread.raw_frame_signal.connect(processing_thread.process_frame)
-        camera_thread.camera_stopped_signal.connect(processing_thread.stop)
-        camera_thread.camera_stopped_signal.connect(camera_thread.stop)
-        processing_thread.annotated_frame_signal.connect(lambda image, idx=self.camera_index: self.UpdatePixmap(image, idx))
+        camera_thread.camera_failed_signal.connect(camera_thread.stop)
+        camera_thread.frame_signal.connect(lambda image, idx=self.camera_index: self.UpdatePixmap(image, idx))
         
         camera_thread.start()
-        processing_thread.start()
                 
         self.camera_index += 1
-        self.video_threads.append((camera_thread, processing_thread))
+        self.video_threads.append(camera_thread)
     
     def UpdatePixmap(self, Image: QtGui.QImage, camera_index: int):
         if isinstance(camera_index, int) == False:
@@ -271,15 +270,15 @@ class MightyMicros(QtWidgets.QMainWindow):
         if self.isRecord == False:
             self.ui.pushButton.setText("Stop Recording")  
             self.timer.start() #start the timer
-            for idx, (_, processing_thread) in enumerate(self.video_threads, start=1):
-                processing_thread.start_recording(idx, self.videoNumber)
+            for idx, camera_thread in enumerate(self.video_threads, start=1):
+                camera_thread.start_recording(self.videoNumber)
                 self.videoNumber += 1
             self.isRecord = True
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Started")
         else:
             self.ui.pushButton.setText("Start Recording")
             self.timer.stop()
-            [processing_thread.stop_recording() for _, processing_thread in self.video_threads]
+            [camera_thread.stop_recording() for camera_thread in self.video_threads]
             self.isRecord = False
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Stopped")
             self.videoNumber += 1
@@ -361,12 +360,10 @@ class MightyMicros(QtWidgets.QMainWindow):
         i.e closing files, releasing threads. 
         """
         
-        for camera_thread, processing_thread in self.video_threads:
+        for camera_thread in self.video_threads:
             logger.info(f"Stopping Camera {camera_thread.camera_index}")
             camera_thread.stop()
             camera_thread.wait()
-            processing_thread.stop()
-            processing_thread.wait()
         
         print("Closing application")
         # Pass the event back to the normal handler to close the window.
