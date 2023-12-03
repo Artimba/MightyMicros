@@ -37,7 +37,7 @@ class MightyMicros(QtWidgets.QMainWindow):
 
         self.video_threads = []
         self.camera_index = 0
-        self.temp_data = ['data/20231017_120545.mp4', 'data/20231017_122937.mp4']
+        #self.temp_data = ['data/20231017_120545.mp4', 'data/20231017_122937.mp4']
 
         # Change/add any property about ui here
         self.videoNumber = 1
@@ -90,11 +90,11 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.gridBtn = QtWidgets.QPushButton(self.ui.frame_4)
         self.ui.horizontalLayout_12.addWidget(self.gridBtn)
 
-        self.threadBtn1 = QtWidgets.QPushButton(self.ui.CamLabFrame)
-        self.ui.horizontalLayout_7.addWidget(self.threadBtn1)
+        #self.threadBtn1 = QtWidgets.QPushButton(self.ui.CamLabFrame)
+        #self.ui.horizontalLayout_7.addWidget(self.threadBtn1)
 
-        self.threadBtn2 = QtWidgets.QPushButton(self.ui.CamLabFrame)
-        self.ui.horizontalLayout_7.addWidget(self.threadBtn2)
+        #self.threadBtn2 = QtWidgets.QPushButton(self.ui.CamLabFrame)
+        #self.ui.horizontalLayout_7.addWidget(self.threadBtn2)
 
        
 
@@ -116,6 +116,18 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.verticalLayout_7.removeWidget(self.ui.graphicsView_2)
         self.ui.graphicsView_2.deleteLater()
         self.ui.graphicsView_2 = None
+
+        self.ui.horizontalLayout_12.removeWidget(self.ui.toolButton_4)
+        self.ui.toolButton_4.deleteLater()
+        self.ui.toolButton_4 = None
+
+        self.ui.horizontalLayout_12.removeWidget(self.ui.toolButton_5)
+        self.ui.toolButton_5.deleteLater()
+        self.ui.toolButton_5= None
+
+        self.ui.horizontalLayout_12.removeWidget(self.ui.toolButton_6)
+        self.ui.toolButton_6.deleteLater()
+        self.ui.toolButton_6= None
 
         #self.ui.horizontalLayout_15.removeWidget(self.ui.label_7)
         #self.ui.label_7.deleteLater() 
@@ -194,8 +206,11 @@ class MightyMicros(QtWidgets.QMainWindow):
 
         self.videoCombo.currentTextChanged.connect(self.comboBoxChanged)
 
-        self.threadBtn1.clicked.connect(self.InitializeCamera)
-        self.threadBtn2.clicked.connect(self.InitializeCamera)
+        self.InitializeCamera()
+        self.InitializeCamera()
+
+        #self.threadBtn1.clicked.connect(self.InitializeCamera)
+        #self.threadBtn2.clicked.connect(self.InitializeCamera)
         # endregion
         
         # region [ Translation ]
@@ -207,8 +222,8 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.RecordTab), _translate("MainWindow", "Camera Feeds"))
         self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_2), _translate("MainWindow", "Media Players"))
         self.gridBtn.setText(_translate("MainWindow", "Grid Management"))
-        self.threadBtn1.setText(_translate("MainWindow", "Show Mighty Micros Camera"))
-        self.threadBtn2.setText(_translate("MainWindow", "Show Microtome Camera"))
+        #self.threadBtn1.setText(_translate("MainWindow", "Show Mighty Micros Camera"))
+        #self.threadBtn2.setText(_translate("MainWindow", "Show Microtome Camera"))
 
         # endregion
         
@@ -236,6 +251,7 @@ class MightyMicros(QtWidgets.QMainWindow):
     def InitializeCamera(self):
         # Manage unique integers for threads
         
+        
         if self.camera_index == 0:
             self.ui.label_3.setText("Loading...")
         elif self.camera_index == 1:
@@ -247,7 +263,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         
         logger.info(f"Initializing Camera {self.camera_index}")
-        camera_thread = VideoThread(self.temp_data[self.camera_index])
+        camera_thread = VideoThread(self.camera_index)
         
         camera_thread.camera_failed_signal.connect(camera_thread.stop)
         camera_thread.frame_signal.connect(lambda image, idx=self.camera_index: self.UpdatePixmap(image, idx))
@@ -272,7 +288,6 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.timer.start() #start the timer
             for idx, camera_thread in enumerate(self.video_threads, start=1):
                 camera_thread.start_recording(self.videoNumber)
-                self.videoNumber += 1
             self.isRecord = True
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Started")
         else:
@@ -281,7 +296,9 @@ class MightyMicros(QtWidgets.QMainWindow):
             [camera_thread.stop_recording() for camera_thread in self.video_threads]
             self.isRecord = False
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Stopped")
+            self.videoCombo.addItem("Recording Session " + str(self.videoNumber))
             self.videoNumber += 1
+
 
     #function to change button text 
     def mediaStateChange1(self, state): 
