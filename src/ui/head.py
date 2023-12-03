@@ -37,6 +37,7 @@ class MightyMicros(QtWidgets.QMainWindow):
 
         self.video_threads = []
         self.camera_index = 0
+        self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
         #self.temp_data = ['data/20231017_120545.mp4', 'data/20231017_122937.mp4']
 
         # Change/add any property about ui here
@@ -356,8 +357,8 @@ class MightyMicros(QtWidgets.QMainWindow):
             if i.isdigit():
                 num += i
 
-        self.mediaPlayer1.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(os.getcwd()+'/video_recording_1_'+num+'.mp4')))
-        self.mediaPlayer2.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(os.getcwd()+'/video_recording_2_'+num+'.mp4')))
+        self.mediaPlayer1.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(os.path.join(self.save_path, f'video_recording_0_{num}.mp4'))))
+        self.mediaPlayer2.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(os.path.join(self.save_path, f'video_recording_1_{num}.mp4'))))
 
         self.ui.pushButton_2.setEnabled(True)
         self.ui.pushButton_5.setEnabled(True)
