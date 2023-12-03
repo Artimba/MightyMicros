@@ -28,7 +28,7 @@ def linear_interpolation(prev_seq, seq, label):
         t = Decimal(frame-a0)/Decimal(a1-a0)
         info = [label]
         # Interpolate bounding box dimensions for the current frame
-        for b0, b1 in ((prev_seq[k], seq[k]) for k in ('x', 'y', 'width', 'height')):
+        for b0, b1 in ((prev_seq[k], seq[k]) for k in ('x', 'y', 'width', 'height', 'rotation')):
             info.append(str(b0 + t*(b1-b0)))
         # Add interpolated information for the current frame to 'frames_info'
         frames_info[frame] = info

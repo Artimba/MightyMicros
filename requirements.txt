@@ -1,10 +1,5 @@
-opencv-python
-opencv-contrib-python
-numpy
-torch
-torchvision
-label-studio
-label-studio-ml
-tensorflow
-ultralytics
-pykalman
+-r requirements/build.txt
+-r requirements/optional.txt
+-r requirements/runtime.txt
+-r requirements/tests.txt
+-r requirements/mighty.txt

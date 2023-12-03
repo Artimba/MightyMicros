@@ -8,7 +8,7 @@ from ultralytics import YOLO
 from src.pipeline.model import Model
 
 
-model = Model('runs/detect/train4/weights/best.pt')
+model = Model()
 video_path = "data/20231017_120545.mp4"
 cap = cv2.VideoCapture(video_path)
 
@@ -22,6 +22,7 @@ while cap.isOpened():
         desired_height = 1080
         cv2.resizeWindow('YOLOv8 Inference', desired_width, desired_height)
         frame = model.predict(frame)
+        frame = cv2.resize(frame, (desired_width, desired_height))
         print("Detections:", len(model.manager.detections))
 
         cv2.imshow("YOLOv8 Inference", frame)

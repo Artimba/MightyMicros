@@ -12,10 +12,10 @@ random.seed(42)
 
 # Paths
 origin_path = 'converter/images/'
-train_images_path = '/home/sky/datasets/training_set_3/images/train/'
-val_images_path = '/home/sky/datasets/training_set_3/images/val/'
-train_labels_path = '/home/sky/datasets/training_set_3/labels/train/'
-val_labels_path = '/home/sky/datasets/training_set_3/labels/val/'
+train_images_path = '/home/sky/datasets/obb_split/images/train/'
+val_images_path = '/home/sky/datasets/obb_split/images/val/'
+train_labels_path = '/home/sky/datasets/obb_split/labels/train/'
+val_labels_path = '/home/sky/datasets/obb_split/labels/val/'
 
 # Make sure destination folders exist
 os.makedirs(train_images_path, exist_ok=True)
@@ -24,7 +24,7 @@ os.makedirs(train_labels_path, exist_ok=True)
 os.makedirs(val_labels_path, exist_ok=True)
 
 # Get all image files
-image_files = glob(os.path.join(origin_path, 'frame_*.jpg'))
+image_files = glob(os.path.join(origin_path, 'video_*.jpg'))
 
 # Determine how many images will be in the validation set (20% of the dataset)
 val_size = int(len(image_files) * 0.2)
@@ -51,7 +51,7 @@ for image_path in val_images:
     move_file(image_path, label_path, val_images_path, val_labels_path)
 
 # Move the remaining images and their labels to the training directories
-remaining_image_files = glob(os.path.join(origin_path, 'frame_*.jpg'))
+remaining_image_files = glob(os.path.join(origin_path, 'video_*.jpg'))
 for image_path in remaining_image_files:
     base_filename = os.path.basename(image_path).replace('.jpg', '.txt')
     label_path = os.path.join(origin_path.replace('images', 'labels'), base_filename)

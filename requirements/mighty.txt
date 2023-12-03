@@ -1,0 +1,6 @@
+pykalman
+pyqt5
+jupyter
+tensorboard
+opencv-python
+opencv-contrib-python
