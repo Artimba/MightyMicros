@@ -37,7 +37,7 @@ class MightyMicros(QtWidgets.QMainWindow):
 
         self.video_threads = []
         self.camera_index = 0
-        self.temp_data = [0, 1]
+        #self.temp_data = [0, 1]
 
         # Change/add any property about ui here
         self.videoNumber = 1
@@ -90,11 +90,11 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.gridBtn = QtWidgets.QPushButton(self.ui.frame_4)
         self.ui.horizontalLayout_12.addWidget(self.gridBtn)
 
-        self.threadBtn1 = QtWidgets.QPushButton(self.ui.CamLabFrame)
-        self.ui.horizontalLayout_7.addWidget(self.threadBtn1)
+        #self.threadBtn1 = QtWidgets.QPushButton(self.ui.CamLabFrame)
+        #self.ui.horizontalLayout_7.addWidget(self.threadBtn1)
 
-        self.threadBtn2 = QtWidgets.QPushButton(self.ui.CamLabFrame)
-        self.ui.horizontalLayout_7.addWidget(self.threadBtn2)
+        #self.threadBtn2 = QtWidgets.QPushButton(self.ui.CamLabFrame)
+        #self.ui.horizontalLayout_7.addWidget(self.threadBtn2)
 
        
 
@@ -116,6 +116,20 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.verticalLayout_7.removeWidget(self.ui.graphicsView_2)
         self.ui.graphicsView_2.deleteLater()
         self.ui.graphicsView_2 = None
+
+        self.ui.horizontalLayout_12.removeWidget(self.ui.toolButton_4)
+        self.ui.toolButton_4.deleteLater()
+        self.ui.toolButton_4 = None
+
+        self.ui.horizontalLayout_12.removeWidget(self.ui.toolButton_5)
+        self.ui.toolButton_5.deleteLater()
+        self.ui.toolButton_5= None
+
+        self.ui.horizontalLayout_12.removeWidget(self.ui.toolButton_6)
+        self.ui.toolButton_6.deleteLater()
+        self.ui.toolButton_6= None
+
+
 
         #self.ui.horizontalLayout_15.removeWidget(self.ui.label_7)
         #self.ui.label_7.deleteLater() 
@@ -194,8 +208,11 @@ class MightyMicros(QtWidgets.QMainWindow):
 
         self.videoCombo.currentTextChanged.connect(self.comboBoxChanged)
 
-        self.threadBtn1.clicked.connect(self.InitializeCamera)
-        self.threadBtn2.clicked.connect(self.InitializeCamera)
+        #self.threadBtn1.clicked.connect(self.InitializeCamera)
+        #self.threadBtn2.clicked.connect(self.InitializeCamera)
+
+        self.InitializeCamera()
+        self.InitializeCamera()
         # endregion
         
         # region [ Translation ]
@@ -207,8 +224,8 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.RecordTab), _translate("MainWindow", "Camera Feeds"))
         self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_2), _translate("MainWindow", "Media Players"))
         self.gridBtn.setText(_translate("MainWindow", "Grid Management"))
-        self.threadBtn1.setText(_translate("MainWindow", "Show Mighty Micros Camera"))
-        self.threadBtn2.setText(_translate("MainWindow", "Show Microtome Camera"))
+        #self.threadBtn1.setText(_translate("MainWindow", "Show Mighty Micros Camera"))
+        #self.threadBtn2.setText(_translate("MainWindow", "Show Microtome Camera"))
 
         # endregion
         
@@ -243,7 +260,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         
         logger.info(f"Initializing Camera {self.camera_index}")
-        camera_thread = CameraThread(self.temp_data[self.camera_index])
+        camera_thread = CameraThread(self.camera_index)
         
         processing_thread = ProcessingThread()
         
@@ -274,14 +291,16 @@ class MightyMicros(QtWidgets.QMainWindow):
             for idx, (_, processing_thread) in enumerate(self.video_threads, start=1):
                 processing_thread.start_recording(idx, self.videoNumber)
             self.isRecord = True
-            self.output1.append("\nRecording Video "+str(self.videoNumber)+" Started")
+            self.output1.append("\nRecording Session "+str(self.videoNumber)+" Started")
         else:
             self.ui.pushButton.setText("Start Recording")
             self.timer.stop()
             [processing_thread.stop_recording() for _, processing_thread in self.video_threads]
             self.isRecord = False
-            self.output1.append("\nRecording Video "+str(self.videoNumber)+" Stopped")
+            self.output1.append("\nRecording Session "+str(self.videoNumber)+" Stopped")
+            self.videoCombo.addItem("Recording Session " + str(self.videoNumber))
             self.videoNumber += 1
+            
 
     #function to change button text 
     def mediaStateChange1(self, state): 
@@ -331,7 +350,7 @@ class MightyMicros(QtWidgets.QMainWindow):
 
     #function to load both videos into media player when the combo box value is changed 
     def comboBoxChanged(self, value): 
-        QtTest.QTest.qWait(1000)
+        QtTest.QTest.qWait(100)
 
         cb_value = str(value)
         num = ''
@@ -363,9 +382,9 @@ class MightyMicros(QtWidgets.QMainWindow):
         for camera_thread, processing_thread in self.video_threads:
             logger.info(f"Stopping Camera {camera_thread.camera_index}")
             camera_thread.stop()
-            camera_thread.wait()
+            #camera_thread.wait()
             processing_thread.stop()
-            processing_thread.wait()
+            #processing_thread.wait()
         
         print("Closing application")
         # Pass the event back to the normal handler to close the window.
@@ -440,7 +459,6 @@ class PopUpWindow(QtWidgets.QWidget):
         self.yesBtn.setText("Yes")
         self.noBtn.setText("No")
         self.okBtn2.setText("Ok")
-        self.typeSlicesLabel.setText("Type the numbers of the slices that were picked up on grid " + str(self.gridNum) + " separated by a comma (ex: 3, 4, 5).")
 
         # endregion
 
@@ -456,17 +474,19 @@ class PopUpWindow(QtWidgets.QWidget):
     def clickOk(self):
         self.gridNum = self.gridSpinBox.value()
 
-        self.missSlicesLabel.setText("The following slices seem to be the slices picked up on the grid: 3, 4, 5. Is this correct?")
+        self.missSlicesLabel.setText("The following slices seem to be the slices picked up on the grid: 1, 2, 3, 4. Is this correct?")
         self.yesBtn.show()
         self.noBtn.show()
 
 
     def clickYes(self): 
-        self.output2.append("Slices 3, 4, and 5 picked up on Grid " + str(self.gridNum))
+        self.output2.append("Slices 1, 2, 3, and 4 picked up on Grid " + str(self.gridNum))
         self.close()
 
     def clickNo(self): 
         self.typeSlicesLabel.show()
+        self.typeSlicesLabel.setText("Type the numbers of the slices that were picked up on grid " + str(self.gridNum) + " separated by a comma (ex: 3, 4, 5).")
+
         self.typeSlicesLineEdit.show()
         self.okBtn2.show()
 
@@ -474,6 +494,9 @@ class PopUpWindow(QtWidgets.QWidget):
         self.sliceNums = self.typeSlicesLineEdit.text()
         self.output2.append("Slices " + str(self.sliceNums) + " picked up on Grid " + str(self.gridNum))
         self.close()
+
+
+    
         
 
 
