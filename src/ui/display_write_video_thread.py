@@ -36,6 +36,29 @@ def my_tracer(frame, event, arg = None):
     return my_tracer
 
 
+
+def draw_text(image, number, position=(50, 50), font_scale=1, color=(255, 0, 0), thickness=2, font=cv2.FONT_HERSHEY_SIMPLEX):
+    """
+    Draw a number as text on an image using OpenCV.
+
+    :param image: The image on which to draw the text.
+    :param number: The number to be drawn as text.
+    :param position: The position where the text starts (bottom-left corner).
+    :param font_scale: Font scale factor that is multiplied by the font-specific base size.
+    :param color: Color of the text in BGR format (blue, green, red).
+    :param thickness: Thickness of the lines used to draw the text.
+    :param font: Font type.
+    :return: Image with the number drawn as text.
+    """
+    # Convert the number to a string
+    text = str(number)
+
+    # Put the text on the image
+    image = cv2.putText(image, text, position, font, font_scale, color, thickness)
+
+    return image
+
+
 class VideoThread(QThread):
     frame_signal = pyqtSignal(QImage)
     camera_failed_signal = pyqtSignal(int)
@@ -64,22 +87,26 @@ class VideoThread(QThread):
                 results = self.model.predict(frame)
                 annotated_frame = results[0].plot(labels=False, masks=False)
 
+                
+                        
                 #output slice number detected to console
                 if self.camera_index == 0: 
                     num_of_slices = len(results[0])
                     
-                    print(num_of_slices, self.currentSlicesFrame)
+
                     if num_of_slices not in self.currentSlicesFrame: 
                         slices_to_add = num_of_slices - max(self.currentSlicesFrame)
-                        print(slices_to_add)
+                    
 
                         for i in range(0, slices_to_add):
                             self.output1.append("Slice " + str(self.numSlices) + " detected" )
+                            #annotated_frame = draw_text(annotated_frame, self.numSlices)
                             self.numSlices +=1
+                            
+                            
+
                         
                     self.currentSlicesFrame.append(num_of_slices)
-                        
-
 
              
 
