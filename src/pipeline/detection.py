@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
-from typing import Optional
-from ultralytics.engine.results import Boxes
+from typing import Optional, Dict
+# from ultralytics.engine.results import Boxes
 from numpy import ndarray, linalg
 from math import atan2, hypot
 from cv2 import rectangle, putText, FONT_HERSHEY_SIMPLEX, line, getTextSize
@@ -23,17 +23,16 @@ def calculate_vector(start: tuple, end: tuple) -> tuple:
 
 def get_direction(angle: float) -> str:
 
-    match angle:
-        case a if 0 <= a < 45 or 315 <= a < 360:
-            return 'E'
-        case a if 45 <= a < 135:
-            return 'N'
-        case a if 135 <= a < 225:
-            return 'W'
-        case a if 225 <= a < 315:
-            return 'S'
-        case _:
-            return 'E'  # Rut-roh scooby, we got a problem.
+    if 0 <= angle < 45 or 315 <= angle < 360:
+        return 'E'
+    elif 45 <= angle < 135:
+        return 'N'
+    elif 135 <= angle < 225:
+        return 'W'
+    elif 225 <= angle < 315:
+        return 'S'
+    else:
+        return 'E'  # Rut-roh scooby, we got a problem.
 
 
 @dataclass
@@ -42,7 +41,7 @@ class Detection:
     bbox: Tensor
     bbox_norm: Tensor
     kalman_filter: KalmanFilter = None
-    neighbors: dict[str, Optional['Detection']] = field(default_factory=lambda: {
+    neighbors: Dict[str, Optional['Detection']] = field(default_factory=lambda: {
         'N': None, 
         'NE': None, 
         'E': None, 
@@ -50,7 +49,8 @@ class Detection:
         'S': None, 
         'SW': None, 
         'W': None, 
-        'NW': None})
+        'NW': None
+    })
     
     def initialize_kalman(self, delta_t: float):
         self.kalman_filter = KalmanFilter(self.bbox_norm, delta_t)
@@ -92,7 +92,7 @@ class DetectionManager:
         self.next_id = 1
         self.delta_t = frame_rate ** -1
         
-    def handle_frame(self, results: Boxes, frame: ndarray) -> ndarray:
+    def handle_frame(self, results, frame: ndarray) -> ndarray:
         
         frame_detections = []
         
@@ -150,7 +150,7 @@ class DetectionManager:
         # Frame updated with bboxs that have id's overlayed (inside the bbox).
         return frame
     
-    def generate_neighbors(self, frame_detections: list[Detection]):
+    def generate_neighbors(self, frame_detections):
         # Look at each bbox inside frame_detections. Compare against every other bbox. Use distance and angle (relative to currently processing detection) to calculate neighbors.
         # A single detection should only have a max of 8 detections, one for each direction (N, NE, E, SE, S, SW, W, NW). This check should be done by looking at angle relative to currently detection.
         # N would be 45 - 135 degrees, NE would be 135 - 225 degrees, etc.

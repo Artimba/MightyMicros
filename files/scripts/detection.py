@@ -3,13 +3,13 @@ This is a quick script that can be used to take an image and run one of our mode
 """
 
 import cv2
-from ultralytics import YOLO
+# from ultralytics import YOLO
 
 from src.pipeline.model import Model
 
 
-model = Model()
-video_path = "data/20231017_120545.mp4"
+model = Model('epoch_3.pth')
+video_path = "data/20231017_122937.mp4"
 cap = cv2.VideoCapture(video_path)
 
 while cap.isOpened():
@@ -17,21 +17,19 @@ while cap.isOpened():
     success, frame = cap.read()
 
     if success:
-        cv2.namedWindow('YOLOv8 Inference', cv2.WINDOW_NORMAL)
+        cv2.namedWindow('RMMCV Inference', cv2.WINDOW_NORMAL)
         desired_width = 1920
         desired_height = 1080
-        cv2.resizeWindow('YOLOv8 Inference', desired_width, desired_height)
+        cv2.resizeWindow('RMMCV Inference', desired_width, desired_height)
         frame = model.predict(frame)
         frame = cv2.resize(frame, (desired_width, desired_height))
         print("Detections:", len(model.manager.detections))
 
-        cv2.imshow("YOLOv8 Inference", frame)
+        cv2.imshow("RMMCV Inference", frame)
 
-        key = cv2.waitKey(0)  # Wait indefinitely for a key press
+        key = cv2.waitKey(1)  # Wait indefinitely for a key press
         if key == ord("q"):
             break
-        elif key == 32:  # ASCII code for spacebar
-            continue  # Go to the next iteration and thus the next frame
     else:
         # Break the loop if the end of the video is reached
         break

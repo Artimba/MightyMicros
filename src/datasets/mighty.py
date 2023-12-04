@@ -1,8 +1,8 @@
 from mmrotate.datasets.builder import ROTATED_DATASETS
-from mmrotate.datasets.dota import DOTADataset
+from mmdet.datasets.custom import CustomDataset
 
 @ROTATED_DATASETS.register_module()
-class MIGHTYDataset(DOTADataset):
+class MIGHTYDataset(CustomDataset):
     CLASSES = ('slice',)
     PALETTE = [
         (0, 255, 0),
