@@ -90,7 +90,7 @@ class VideoThread(QThread):
                 
                         
                 #output slice number detected to console
-                if self.camera_index == 0: 
+                if self.camera_index == 1: 
                     num_of_slices = len(results[0])
                     
 

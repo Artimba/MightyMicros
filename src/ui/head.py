@@ -47,6 +47,9 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.frame_5.setMinimumSize(QtCore.QSize(440, 330))
         self.numSlices = 1
         self.isRecord = False
+
+
+        
         
         # region [ Widgets ]
 
@@ -129,6 +132,16 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.horizontalLayout_12.removeWidget(self.ui.toolButton_6)
         self.ui.toolButton_6.deleteLater()
         self.ui.toolButton_6= None
+
+        self.ui.horizontalLayout_10.removeWidget(self.ui.label_5)
+        self.ui.label_5.deleteLater()
+        self.ui.label_5 = None
+
+        self.ui.horizontalLayout_10.removeWidget(self.ui.label_6)
+        self.ui.label_6.deleteLater()
+        self.ui.label_6 = None
+
+        
 
         #self.ui.horizontalLayout_15.removeWidget(self.ui.label_7)
         #self.ui.label_7.deleteLater() 
@@ -220,11 +233,43 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.pushButton_5.setText(_translate("MainWindow", "Play"))
         self.ui.label_3.setText(_translate("MainWindow", ""))
         self.ui.label_4.setText(_translate("MainWindow", ""))
-        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.RecordTab), _translate("MainWindow", "Camera Feeds"))
-        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_2), _translate("MainWindow", "Media Players"))
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.RecordTab), _translate("MainWindow", "Live Slice Tracking"))
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_2), _translate("MainWindow", "Recording Playback and Grid Management"))
         self.gridBtn.setText(_translate("MainWindow", "Grid Management"))
+        self.ui.label_2.setText(_translate("MainWindow", "External Camera Feed"))
+        self.ui.label.setText(_translate("MainWindow", "Microtome Camera Feed"))
         #self.threadBtn1.setText(_translate("MainWindow", "Show Mighty Micros Camera"))
         #self.threadBtn2.setText(_translate("MainWindow", "Show Microtome Camera"))
+
+        # endregion
+
+
+        # region [ Aesthetics ]
+
+        font = QtGui.QFont()
+        font.setPointSize(30)
+        font.setBold(True)
+        font.setUnderline(False)
+        font.setWeight(75)
+        self.ui.label.setFont(font)
+        self.ui.label_2.setFont(font)
+        self.ui.ConTitle.setFont(font)
+        self.ui.ConTitle_2.setFont(font)
+
+        font2 = QtGui.QFont()
+        font2.setPointSize(15)
+        font2.setWeight(50)
+        font2.setBold(False)
+        font2.setUnderline(False)
+
+        self.ui.pushButton.setFont(font2)
+        self.ui.pushButton_2.setFont(font2)
+        self.ui.pushButton_5.setFont(font2)
+        self.gridBtn.setFont(font2)
+
+        self.output1.setFont(font2)
+        self.output2.setFont(font2)
+
 
         # endregion
         
@@ -288,19 +333,28 @@ class MightyMicros(QtWidgets.QMainWindow):
 
     def ClickBTN(self):
         if self.isRecord == False:
+            
             self.ui.pushButton.setText("Stop Recording")  
             self.timer.start() #start the timer
             for idx, camera_thread in enumerate(self.video_threads, start=1):
                 camera_thread.start_recording(self.videoNumber)
             self.isRecord = True
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Started")
+            
         else:
+            
             self.ui.pushButton.setText("Start Recording")
             self.timer.stop()
             [camera_thread.stop_recording() for camera_thread in self.video_threads]
             self.isRecord = False
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Stopped")
             self.videoCombo.addItem("Recording Session " + str(self.videoNumber))
+            
+            text = self.output1.toPlainText() 
+            with open(os.path.join(self.save_path, f'console_output_{str(self.videoNumber)}.txt'), 'a') as f:
+                f.write(text)
+
+            self.output1.clear()
             self.videoNumber += 1
 
 
@@ -365,6 +419,9 @@ class MightyMicros(QtWidgets.QMainWindow):
 
         self.ui.pushButton_2.setEnabled(True)
         self.ui.pushButton_5.setEnabled(True)
+
+        #text = open(os.path.join(self.save_path, f'console_output_{str(self.videoNumber)}.txt'), "r").read()
+        #self.output2.append(text)
 
     def gridPopUp(self):
  
