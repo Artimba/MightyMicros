@@ -7,10 +7,9 @@ from PyQt5.QtMultimedia import *
 import cv2
 import numpy as np
 from sys import settrace, stdout, stderr
-import queue
 
 from src import PROJECT_ROOT
-from src.pipeline.detection import Model
+from src.pipeline.detection import Model, DetectionManager
 # from src.entry import StreamToLogger
 
 
