@@ -8,6 +8,8 @@ from math import atan2, hypot
 from cv2 import rectangle, putText, FONT_HERSHEY_SIMPLEX, line, getTextSize
 from torch import equal as tensor_equal
 from torch import Tensor
+from mmdet.apis import inference_detector
+
 
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
