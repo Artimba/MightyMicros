@@ -114,10 +114,9 @@ class DetectionManager:
             frame = putText(frame, str(detection.id), (label_x, label_y), FONT_HERSHEY_SIMPLEX, font_scale, blue, thickness)
 
             
-        print(self.prevDetectionLength, len(frame_detections))
         if len(frame_detections) > self.prevDetectionLength:
             num_slices = len(frame_detections) - self.prevDetectionLength
-            for i in range(self.prevDetectionLength, self.prevDetectionLength + num_slices): #trying this out
+            for i in range(1, num_slices+1): #trying this out
                 
                 self.output1.append("Slice " + str(self.prevDetectionLength + i) + " detected" )
                 self.output2.append("Slice " + str(self.prevDetectionLength + i) + " detected" )
