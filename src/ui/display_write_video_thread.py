@@ -36,44 +36,25 @@ def my_tracer(frame, event, arg = None):
 
 
 
-def draw_text(image, number, position=(50, 50), font_scale=1, color=(255, 0, 0), thickness=2, font=cv2.FONT_HERSHEY_SIMPLEX):
-    """
-    Draw a number as text on an image using OpenCV.
-
-    :param image: The image on which to draw the text.
-    :param number: The number to be drawn as text.
-    :param position: The position where the text starts (bottom-left corner).
-    :param font_scale: Font scale factor that is multiplied by the font-specific base size.
-    :param color: Color of the text in BGR format (blue, green, red).
-    :param thickness: Thickness of the lines used to draw the text.
-    :param font: Font type.
-    :return: Image with the number drawn as text.
-    """
-    # Convert the number to a string
-    text = str(number)
-
-    # Put the text on the image
-    image = cv2.putText(image, text, position, font, font_scale, color, thickness)
-
-    return image
 
 
 class VideoThread(QThread):
     frame_signal = pyqtSignal(QImage)
     camera_failed_signal = pyqtSignal(int)
     
-    def __init__(self, camera_index: int, output1: QTextEdit, parent=None):
+    def __init__(self, camera_index: int, output1: QTextEdit, output2: QTextEdit, parent=None):
         super().__init__()
         self.camera = cv2.VideoCapture(camera_index)
         self.camera_index = camera_index
-        self.model = Model(os.path.join(PROJECT_ROOT, 'pipeline', 'runs/detect/train4/weights/best.pt'))
+        self.model = Model(os.path.join(PROJECT_ROOT, 'pipeline', 'runs/detect/train4/weights/best.pt'), output1, output2)
         self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
         self.thread_active = True
         self.video_writer = None
         self.is_recording = False
-        self.numSlices = 1
-        self.currentSlicesFrame = [0]
+        #self.numSlices = 1
+       #self.currentSlicesFrame = [0]
         self.output1 = output1
+        self.output2 = output2
         self.setObjectName(f"VideoThread_{camera_index}")
         logger.info(f'VideoThread initialized with camera index {self.camera_index}')
     
@@ -83,29 +64,30 @@ class VideoThread(QThread):
             success, frame = self.camera.read()
             if success:
                 frame = cv2.resize(frame, (640, 480))
-                results = self.model.predict(frame)
-                annotated_frame = results[0].plot(labels=False, masks=False)
+                #results = self.model.track(frame)
+                annotated_frame, results = self.model.predict(frame)
+                #annotated_frame = results[0].plot(labels=False, masks=False)
 
                 
                         
                 #output slice number detected to console
-                if self.camera_index == 1: 
-                    num_of_slices = len(results[0])
+                # if self.camera_index == 1: 
+                #     num_of_slices = len(results[0])
                     
 
-                    if num_of_slices not in self.currentSlicesFrame: 
-                        slices_to_add = num_of_slices - max(self.currentSlicesFrame)
+                #     if num_of_slices not in self.currentSlicesFrame: 
+                #         slices_to_add = num_of_slices - max(self.currentSlicesFrame)
                     
 
-                        for i in range(0, slices_to_add):
-                            self.output1.append("Slice " + str(self.numSlices) + " detected" )
-                            #annotated_frame = draw_text(annotated_frame, self.numSlices)
-                            self.numSlices +=1
+                #         for i in range(0, slices_to_add):
+                #             self.output1.append("Slice " + str(self.numSlices) + " detected" )
+                #             self.output2.append("Slice " + str(self.numSlices) + " detected" )
+                #             self.numSlices +=1
                             
                             
 
                         
-                    self.currentSlicesFrame.append(num_of_slices)
+                #     self.currentSlicesFrame.append(num_of_slices)
 
              
 

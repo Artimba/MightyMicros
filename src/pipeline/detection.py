@@ -8,7 +8,7 @@ from math import atan2, hypot
 from cv2 import rectangle, putText, FONT_HERSHEY_SIMPLEX, line, getTextSize
 from torch import equal as tensor_equal
 from torch import Tensor
-from mmdet.apis import inference_detector
+from PyQt5.QtWidgets import QTextEdit
 
 
 logging.basicConfig(level=logging.INFO, 
@@ -17,51 +17,67 @@ logger = logging.getLogger('YOLO_Detection')
 
 class Model(object):
 
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, output1: QTextEdit, output2: QTextEdit):
         self.model = YOLO(model_path) 
 
-        self.manager = DetectionManager()
+        self.manager = DetectionManager(30, output1, output2)
+      
 
         
     
     def predict(self, frame):
         logger.debug('Running YOLOv8 inference on the frame')
         
-        detection_results = inference_detector(self.model, frame)
-        frame = self.model.show_result(frame.copy(), detection_results, show=False)
+        detection_results = self.model(frame, verbose = False)
+        #frame = self.model.show_result(frame.copy(), detection_results, show=False)
+        frame = detection_results[0].plot(labels=False, masks=False)
         frame = self.manager.handle_frame(detection_results[0].boxes, frame)
-        print(detection_results)
-        print(type(detection_results[0].boxes))
-        for i, bbox in enumerate(detection_results[0].boxes.xyxy):
-            Detection(bbox, detection_results[0].boxes.xyxyn[i], self.database)
+        #print(detection_results)
+        #print(type(detection_results[0].boxes))
+        #for i, bbox in enumerate(detection_results[0].boxes.xyxy):
+            #Detection(bbox, detection_results[0].boxes.xyxyn[i], self.database)
 
-        return self.model(frame, verbose=False)
+        return frame, detection_results
+
+        
+
+    #def track(self, frame):
+     #   return self.model(frame, verbose=False)
     
 
 class Detection:
-    id: int
-    bbox: Tensor
-    bbox_norm: Tensor
+    def __init__(self, id: int, bbox: Tensor, bbox_norm: Tensor):
+        self.id = id 
+        self.bbox = bbox
+        self.bbox_norm = bbox_norm
+
     
 
 class DetectionManager:
-    def __init__(self, frame_rate: int = 30):
+    def __init__(self, frame_rate: int, output1: QTextEdit, output2: QTextEdit):
         self.detections = {}
         self.next_id = 1
         self.delta_t = frame_rate ** -1
+        self.prevDetectionLength = 0
+        self.output1 = output1 
+        self.output2 = output2
+
+        #self.lastSliceNum = 1
         
     def handle_frame(self, results: Boxes, frame: ndarray) -> ndarray:
         
         frame_detections = []
+        slice_num = 1
         
-      
+        
         # Generate detections with -1 id for each bbox in results.
         for bbox, bbox_norm in zip(results.xyxy, results.xyxyn):
-            frame_detections.append(Detection(-1, bbox, bbox_norm))
+            frame_detections.append(Detection(slice_num, bbox, bbox_norm))
+            slice_num += 1
       
         
-        for detection in frame_detections:
-            self.add(detection)
+        #for detection in frame_detections:
+         #   self.add(detection)
         
         green = (0, 255, 0)
         blue = (255, 0, 0)
@@ -69,10 +85,12 @@ class DetectionManager:
         font_scale = 0.5
 
         # Update frame with bboxes that have ids overlayed (inside the bbox).
-        for detection in self.detections.values():
+        
+        for detection in frame_detections:
             bbox = detection.bbox
             x1, y1, x2, y2 = [int(coord) for coord in bbox]
-            rectangle(frame, (x1, y1), (x2, y2), color=green, thickness=thickness)  # Draw bbox
+            frame = rectangle(frame, (x1, y1), (x2, y2), color=green, thickness=thickness)  # Draw bbox
+            
             
             label_size, _ = getTextSize(str(detection.id), FONT_HERSHEY_SIMPLEX, font_scale, thickness)
 
@@ -90,10 +108,22 @@ class DetectionManager:
             line_end_x = label_x if label_x == x2 + 5 else x2
             line_end_y = label_y - label_size[1] // 2
             lineThickness = 2
-            line(frame, (x2, y2), (line_end_x, line_end_y), blue, lineThickness)
+            frame = line(frame, (x2, y2), (line_end_x, line_end_y), blue, lineThickness)
 
             # Draw text label
-            putText(frame, str(detection.id), (label_x, label_y), FONT_HERSHEY_SIMPLEX, font_scale, blue, thickness)
+            frame = putText(frame, str(detection.id), (label_x, label_y), FONT_HERSHEY_SIMPLEX, font_scale, blue, thickness)
+
+            
+        print(self.prevDetectionLength, len(frame_detections))
+        if len(frame_detections) > self.prevDetectionLength:
+            num_slices = len(frame_detections) - self.prevDetectionLength
+            for i in range(self.prevDetectionLength, self.prevDetectionLength + num_slices): #trying this out
+                
+                self.output1.append("Slice " + str(self.prevDetectionLength + i) + " detected" )
+                self.output2.append("Slice " + str(self.prevDetectionLength + i) + " detected" )
+
+
+            self.prevDetectionLength = len(frame_detections)
 
 
         

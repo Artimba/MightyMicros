@@ -38,6 +38,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.video_threads = []
         self.camera_index = 0
         self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
+        self.textFileNum = 1
         #self.temp_data = ['data/20231017_120545.mp4', 'data/20231017_122937.mp4']
 
         # Change/add any property about ui here
@@ -84,9 +85,20 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.output1 = QtWidgets.QTextEdit(self.ui.ConFrame)
         self.output1.setObjectName("output1")
         self.ui.verticalLayout_4.addWidget(self.output1)
+
+        
         self.output2 = QtWidgets.QTextEdit(self.ui.ConFrame_2)
         self.output2.setObjectName("output2")
         self.ui.verticalLayout_7.addWidget(self.output2)
+
+        self.outputConsoleBtn = QtWidgets.QPushButton(self.ui.ConFrame)
+        self.outputConsoleBtn.setObjectName("outputConsole")
+        self.ui.verticalLayout_4.addWidget(self.outputConsoleBtn)
+
+        self.clearConsoleBtn = QtWidgets.QPushButton(self.ui.ConFrame)
+        self.clearConsoleBtn.setObjectName("outputConsole")
+        self.ui.verticalLayout_4.addWidget(self.clearConsoleBtn)
+
 
         self.videoCombo = QtWidgets.QComboBox(self.ui.frame_4)
         self.ui.horizontalLayout_12.addWidget(self.videoCombo)
@@ -102,7 +114,7 @@ class MightyMicros(QtWidgets.QMainWindow):
 
        
 
-        self.popUp = PopUpWindow(self.output2, self)
+        
 
 
         # endregion
@@ -193,6 +205,8 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         self.ui.pushButton.clicked.connect(self.ClickBTN)
         self.gridBtn.clicked.connect(self.gridPopUp)
+        self.clearConsoleBtn.clicked.connect(self.clickClear)
+        self.outputConsoleBtn.clicked.connect(self.clickWrite)
         
         #self.Thread1 = Thread1(self.videoNumber, False)
         #self.Thread1.start()
@@ -233,11 +247,14 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.pushButton_5.setText(_translate("MainWindow", "Play"))
         self.ui.label_3.setText(_translate("MainWindow", ""))
         self.ui.label_4.setText(_translate("MainWindow", ""))
-        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.RecordTab), _translate("MainWindow", "Live Slice Tracking"))
-        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_2), _translate("MainWindow", "Recording Playback and Grid Management"))
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.RecordTab), _translate("MainWindow", "Slicing"))
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_2), _translate("MainWindow", "Grid Management"))
         self.gridBtn.setText(_translate("MainWindow", "Grid Management"))
         self.ui.label_2.setText(_translate("MainWindow", "External Camera Feed"))
         self.ui.label.setText(_translate("MainWindow", "Microtome Camera Feed"))
+        self.clearConsoleBtn.setText(_translate("MainWindow", "Clear"))
+        self.outputConsoleBtn.setText(_translate("MainWindow", "Write to File"))
+
         #self.threadBtn1.setText(_translate("MainWindow", "Show Mighty Micros Camera"))
         #self.threadBtn2.setText(_translate("MainWindow", "Show Microtome Camera"))
 
@@ -257,7 +274,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.ConTitle_2.setFont(font)
 
         font2 = QtGui.QFont()
-        font2.setPointSize(15)
+        font2.setPointSize(18)
         font2.setWeight(50)
         font2.setBold(False)
         font2.setUnderline(False)
@@ -266,6 +283,8 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.pushButton_2.setFont(font2)
         self.ui.pushButton_5.setFont(font2)
         self.gridBtn.setFont(font2)
+        self.clearConsoleBtn.setFont(font2)
+        self.outputConsoleBtn.setFont(font2)
 
         self.output1.setFont(font2)
         self.output2.setFont(font2)
@@ -309,7 +328,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         
         logger.info(f"Initializing Camera {self.camera_index}")
-        camera_thread = VideoThread(self.camera_index, self.output1)
+        camera_thread = VideoThread(self.camera_index, self.output1, self.output2)
         
         camera_thread.camera_failed_signal.connect(camera_thread.stop)
         camera_thread.frame_signal.connect(lambda image, idx=self.camera_index: self.UpdatePixmap(image, idx))
@@ -340,6 +359,7 @@ class MightyMicros(QtWidgets.QMainWindow):
                 camera_thread.start_recording(self.videoNumber)
             self.isRecord = True
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Started")
+            self.output2.append("\nRecording Video "+str(self.videoNumber)+" Started")
             
         else:
             
@@ -348,13 +368,12 @@ class MightyMicros(QtWidgets.QMainWindow):
             [camera_thread.stop_recording() for camera_thread in self.video_threads]
             self.isRecord = False
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Stopped")
+            self.output2.append("\nRecording Video "+str(self.videoNumber)+" Started")
             self.videoCombo.addItem("Recording Session " + str(self.videoNumber))
             
-            text = self.output1.toPlainText() 
-            with open(os.path.join(self.save_path, f'console_output_{str(self.videoNumber)}.txt'), 'a') as f:
-                f.write(text)
+            
 
-            self.output1.clear()
+            
             self.videoNumber += 1
 
 
@@ -424,12 +443,27 @@ class MightyMicros(QtWidgets.QMainWindow):
         #self.output2.append(text)
 
     def gridPopUp(self):
+
+        self.popUp = PopUpWindow(self.output2, self.output1, self)
  
         if self.popUp.isVisible():
             self.popUp.hide()
 
         else:
             self.popUp.show()
+
+    def clickClear(self): 
+        self.output1.clear() 
+        self.output2.clear() 
+
+    def clickWrite(self):
+        text = self.output1.toPlainText() 
+
+        with open(os.path.join(self.save_path, f'console_output_{self.textFileNum}.txt'), 'w') as file:
+            file.write(text)
+
+        self.textFileNum += 1
+
 
     
     def closeEvent(self, event: QtGui.QCloseEvent):
@@ -452,9 +486,10 @@ class MightyMicros(QtWidgets.QMainWindow):
 #class for grid management pop up window 
 class PopUpWindow(QtWidgets.QWidget):
    
-    def __init__(self, output2: QtWidgets.QTextEdit, parent = None):
+    def __init__(self, output2: QtWidgets.QTextEdit, output1: QtWidgets.QTextEdit, parent = None):
         super().__init__()
         self.output2 = output2
+        self.output1 = output1
         self.gridNum = 0
 
 
@@ -538,6 +573,7 @@ class PopUpWindow(QtWidgets.QWidget):
 
 
     def clickYes(self): 
+        self.output1.append("Slices 3, 4, and 5 picked up on Grid " + str(self.gridNum))
         self.output2.append("Slices 3, 4, and 5 picked up on Grid " + str(self.gridNum))
         self.close()
 
@@ -548,6 +584,7 @@ class PopUpWindow(QtWidgets.QWidget):
 
     def clickOk2(self): 
         self.sliceNums = self.typeSlicesLineEdit.text()
+        self.output1.append("Slices " + str(self.sliceNums) + " picked up on Grid " + str(self.gridNum))
         self.output2.append("Slices " + str(self.sliceNums) + " picked up on Grid " + str(self.gridNum))
         self.close()
         
