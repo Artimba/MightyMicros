@@ -266,6 +266,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         camera_thread = VideoThread(self.temp_data[self.camera_index], self.output1)
         
         camera_thread.camera_failed_signal.connect(camera_thread.stop)
+        camera_thread.console_signal.connect(self.consoleUpdate)
         camera_thread.frame_signal.connect(lambda image, idx=self.camera_index: self.UpdatePixmap(image, idx))
         
         camera_thread.start()
@@ -309,6 +310,9 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.ui.pushButton_2.setText("Pause")
         else: 
             self.ui.pushButton_2.setText("Play")
+    
+    def consoleUpdate(self, text):
+        self.output1.append(text)
 
     #functions to change the position and duration of the slider
     def positionChanged1(self, position):

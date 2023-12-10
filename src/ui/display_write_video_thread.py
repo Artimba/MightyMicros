@@ -62,8 +62,9 @@ def my_tracer(frame, event, arg = None):
 class VideoThread(QThread):
     frame_signal = pyqtSignal(QImage)
     camera_failed_signal = pyqtSignal(int)
+    console_signal = pyqtSignal(str)
     
-    def __init__(self, camera_index: int, output1: QTextEdit, parent=None):
+    def __init__(self, camera_index: int, parent=None):
         super().__init__()
         self.camera = cv2.VideoCapture(camera_index)
         self.camera_index = camera_index
@@ -73,8 +74,7 @@ class VideoThread(QThread):
         self.video_writer = None
         self.is_recording = False
         self.numSlices = 1
-        self.currentSlicesFrame = [0]
-        self.output1 = output1
+        self.detectedSlices = [] # Temporary measure until detection code is fixed
         self.setObjectName(f"VideoThread_{camera_index}")
         logger.info(f'VideoThread initialized with camera index {self.camera_index}')
     
@@ -85,16 +85,13 @@ class VideoThread(QThread):
             if success:
                 frame = cv2.resize(frame, (640, 480))
                 annotated_frame = self.model.predict(frame)
-   
+                
                 #output slice number detected to console
-                if self.camera_index == 0: 
-                    num_of_slices = len(self.model.manager.detections)
-                    if num_of_slices not in self.currentSlicesFrame: 
-                        slices_to_add = num_of_slices - max(self.currentSlicesFrame)
-                        for i in range(0, slices_to_add):
-                            self.output1.append("Slice " + str(self.numSlices) + " detected" )
-                            self.numSlices +=1
-                    self.currentSlicesFrame.append(num_of_slices)
+                # if self.camera_index == 0: 
+                for detection in self.model.manager.detections.values():                  
+                    if detection.id not in self.detectedSlices:
+                        self.console_signal.emit(f"Camera {self.camera_index}: Slice {str(detection.id)} detected" )
+                        self.detectedSlices.append(detection.id)
 
                 if self.is_recording:
                     try:
