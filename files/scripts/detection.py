@@ -8,7 +8,7 @@ import cv2
 from src.pipeline.model import Model
 
 
-model = Model('epoch_3.pth')
+model = Model('epoch_30.pth')
 video_path = "data/20231017_122937.mp4"
 cap = cv2.VideoCapture(video_path)
 

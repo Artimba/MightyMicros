@@ -87,7 +87,8 @@ class Model(object):
     
     def predict(self, frame):
         detection_results = inference_detector(self.model, frame)
-        frame = self.model.show_result(frame.copy(), detection_results, show=False)
+        frame = self.manager.handle_frame(detection_results, frame)
+        # frame = self.model.show_result(frame.copy(), detection_results, show=False)
         # frame = self.manager.handle_frame(detection_results[0].boxes, frame)
         # print(detection_results)
         # print(type(detection_results[0].boxes))

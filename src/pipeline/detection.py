@@ -1,13 +1,22 @@
 from dataclasses import dataclass, field
 from typing import Optional, Dict
 # from ultralytics.engine.results import Boxes
-from numpy import ndarray, linalg
+import numpy as np
 from math import atan2, hypot
-from cv2 import rectangle, putText, FONT_HERSHEY_SIMPLEX, line, getTextSize
-from torch import equal as tensor_equal
 from torch import Tensor
+import cv2
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
+import matplotlib.pyplot as plt
+from mmcv import bgr2rgb, rgb2bgr
 
 from src.pipeline.kalman import KalmanFilter
+
+COORDINATES = 9 # Amount of coordinates in a bounding box + score
+EPS = 1e-2 # Epsilon value for matplotlib scale wiggling
+EPS2 = 1e-5 # Epsilon value for numpy.isclose()
+MIN_AREAS = 800 # Lower bound of scales
+MAX_AREAS = 30000 # Upper bound of scales
 
 def calculate_vector(start: tuple, end: tuple) -> tuple:
     x_1, y_1 = start[:2]
@@ -40,6 +49,9 @@ class Detection:
     id: int
     bbox: Tensor
     bbox_norm: Tensor
+    xywh: np.ndarray
+    centroid_norm: np.ndarray
+    score: float
     kalman_filter: KalmanFilter = None
     neighbors: Dict[str, Optional['Detection']] = field(default_factory=lambda: {
         'N': None, 
@@ -53,7 +65,7 @@ class Detection:
     })
     
     def initialize_kalman(self, delta_t: float):
-        self.kalman_filter = KalmanFilter(self.bbox_norm, delta_t)
+        self.kalman_filter = KalmanFilter(self.centroid_norm, delta_t)
     
     def __eq__(self, __value: object) -> bool:
         
@@ -75,11 +87,10 @@ class Detection:
             if neighbor is None and other_neighbor is None:
                 continue
             
-            centroid = self.kalman_filter.calculate_centroid(self.bbox_norm)
             other_centroid = __value.kalman_filter.current_state_estimate[:2]
             
             # Compare centroids of neighbors.
-            if linalg.norm(centroid - other_centroid) > threshold:
+            if np.linalg.norm(self.centroid_norm - other_centroid) > threshold:
                 return False
             
         
@@ -92,7 +103,10 @@ class DetectionManager:
         self.next_id = 1
         self.delta_t = frame_rate ** -1
         
-    def handle_frame(self, results, frame: ndarray) -> ndarray:
+    def handle_frame(self, results, frame: np.ndarray) -> np.ndarray:
+        self.detections = {} # TEMPORARY
+        self.next_id = 1 # TEMPORARY
+        bboxes, bbox_norms = self.handle_results(results, (frame.shape[1], frame.shape[0]))
         
         frame_detections = []
         
@@ -100,8 +114,15 @@ class DetectionManager:
         self.predict_detections()
         
         # Generate detections with -1 id for each bbox in results.
-        for bbox, bbox_norm in zip(results.xyxy, results.xyxyn):
-            frame_detections.append(Detection(-1, bbox, bbox_norm))
+        for i in range(len(bboxes)):
+            centroid = results[0][i, 0:2]
+            centroid_norm = np.array([centroid[0] / frame.shape[1], centroid[1] / frame.shape[0]])
+            frame_detections.append(Detection(id=-1, 
+                                              bbox=bboxes[i, 0:8], 
+                                              bbox_norm=bbox_norms[i, 0:8], 
+                                              score=bboxes[i, 8], 
+                                              xywh=results[0][0:4],
+                                              centroid_norm=centroid_norm))
         
         for new_detection in frame_detections:
             self.process_detection(new_detection)
@@ -112,40 +133,8 @@ class DetectionManager:
         
         for detection in frame_detections:
             self.add(detection)
-        
-        green = (0, 255, 0)
-        blue = (255, 0, 0)
-        thickness = 2
-        font_scale = 0.5
-
-        # Update frame with bboxes that have ids overlayed (inside the bbox).
-        for detection in self.detections.values():
-            bbox = detection.bbox
-            x1, y1, x2, y2 = [int(coord) for coord in bbox]
-            rectangle(frame, (x1, y1), (x2, y2), color=green, thickness=thickness)  # Draw bbox
-            
-            label_size, _ = getTextSize(str(detection.id), FONT_HERSHEY_SIMPLEX, font_scale, thickness)
-
-            # Label position (bottom right corner of bbox)
-            label_x = x2 + 15
-            label_y = y2
-
-            # Check if label would go beyond the frame dimensions
-            if label_x + label_size[0] > frame.shape[1]:
-                label_x = frame.shape[1] - label_size[0] - 5
-            if label_y - label_size[1] < 0:
-                label_y = label_size[1] + 5
-
-            # Draw leader line from bbox to text
-            line_end_x = label_x if label_x == x2 + 5 else x2
-            line_end_y = label_y - label_size[1] // 2
-            lineThickness = 2
-            line(frame, (x2, y2), (line_end_x, line_end_y), blue, lineThickness)
-
-            # Draw text label
-            putText(frame, str(detection.id), (label_x, label_y), FONT_HERSHEY_SIMPLEX, font_scale, blue, thickness)
-
-
+        color = (138 / 255, 43 / 255, 226 / 255)
+        frame = self.draw_bboxes(frame, color=color)
         
         # Frame updated with bboxs that have id's overlayed (inside the bbox).
         return frame
@@ -162,7 +151,7 @@ class DetectionManager:
             min_distances = {direction: float('inf') for direction in neighbors}
         
             for other_detection in frame_detections:
-                if tensor_equal(detection.bbox_norm, other_detection.bbox_norm):
+                if np.isclose(detection.bbox_norm, other_detection.bbox_norm, atol=EPS2).all():
                     # We are at the current detection, so skip.
                     continue
             
@@ -208,32 +197,149 @@ class DetectionManager:
             if detection.kalman_filter is not None:
                 detection.kalman_filter.predict()
     
-    # def update_detections(self, frame_detections: list[Detection]):
-    #     for new_detection in frame_detections:
-    #         is_match = False
-    #         for _, existing_detection in self.detections.items():
-    #             if new_detection == existing_detection:
-    #                 existing_detection.update(new_detection.bbox_norm)
-    #                 is_match = True
-    #                 break
-                
-    #             if not is_match:
-    #                 new_detection.initialize_kalman(self.delta_t)
-    #                 new_detection.id = self.next_id
-    #                 self.detections[self.next_id] = new_detection
-    #                 self.next_id += 1
-                    
-    # def add(self, new_detection: Detection):
+    def handle_results(self, results, frame_size: tuple) -> tuple:
+        """Convert results from MMCV to a tuple of bounding boxes and labels.
         
-    #     for _, detection in self.detections.items():
-    #         if new_detection == detection:
-    #             print("Found a match!")
-    #             detection.bbox = new_detection.bbox
-    #             detection.bbox_norm = new_detection.bbox_norm
-    #             detection.neighbors = new_detection.neighbors
-    #             return
+        This method incorporates modifications based on code from the mmrotate repository (OpenMMLab), 
+        available at [https://github.com/open-mmlab/mmrotate]. mmrotate is distributed under the Apache 2.0 License.
+
+        Args:
+            results: The detection results from inference.
+            frame_size (tuple): The size of the frame (width, height).
+
+        Returns:
+            Tuple: A tuple containing two lists - the first with un-normalized bounding boxes, 
+                and the second with normalized bounding boxes.
+        """
+        if isinstance(results, tuple):
+            bbox_result, segm_result = results
+            if isinstance(segm_result, tuple):
+                segm_result = segm_result[0]
+        else:
+            bbox_result, segmn_result = results, None
         
-    #     print("Generating new id")
-    #     new_detection.id = self.next_id
-    #     self.detections[self.next_id] = new_detection
-    #     self.next_id += 1
+        bboxes = np.vstack(bbox_result)
+        
+        # labels = [
+        #     np.full(bbox.shape[0], i, dtype=np.int32)
+        #     for i, bbox in enumerate(bbox_result)
+        # ]
+        # labels = np.concatenate(labels)
+        
+        # Normalize bounding boxes
+        img_width, img_height = frame_size
+        bboxes_coordinates = np.zeros((bboxes.shape[0], COORDINATES), dtype=np.float32)
+        for i, bbox in enumerate(bboxes):
+            x_center, y_center, width, height, rotation = bbox[:5]
+            half_width_x, half_width_y = width / 2 * np.cos(rotation), width / 2 * np.sin(rotation)
+            half_height_x, half_height_y = -height / 2 * np.sin(rotation), height / 2 * np.cos(rotation)
+            
+            p1 = (x_center - half_width_x - half_height_x, y_center - half_width_y - half_height_y)
+            p2 = (x_center + half_width_x - half_height_x, y_center + half_width_y - half_height_y)
+            p3 = (x_center + half_width_x + half_height_x, y_center + half_width_y + half_height_y)
+            p4 = (x_center - half_width_x + half_height_x, y_center - half_width_y + half_height_y)
+            
+            bboxes_coordinates[i, 0] = p1[0]  # x1
+            bboxes_coordinates[i, 1] = p1[1]  # y1
+            bboxes_coordinates[i, 2] = p2[0]  # x2
+            bboxes_coordinates[i, 3] = p2[1]  # y2
+            bboxes_coordinates[i, 4] = p3[0]  # x3
+            bboxes_coordinates[i, 5] = p3[1]  # y3
+            bboxes_coordinates[i, 6] = p4[0]  # x4
+            bboxes_coordinates[i, 7] = p4[1]  # y4     
+                 
+            # Copy over score
+            bboxes_coordinates[i, 8] = bbox[5]
+            
+        
+        normalized_bboxes = np.zeros_like(bboxes_coordinates, dtype=np.float32)
+        normalized_bboxes[:, [0, 2, 4, 6]] = bboxes_coordinates[:, [0, 2, 4, 6]] / img_width
+        normalized_bboxes[:, [1, 3, 5, 7]] = bboxes_coordinates[:, [1, 3, 5, 7]] / img_height
+
+        # Copy over score
+        normalized_bboxes[:, 8] = bboxes_coordinates[:, 8]
+        
+
+        return (bboxes_coordinates, normalized_bboxes)
+    
+    def draw_bboxes(self, frame: np.ndarray,  color='blue', thickness=2, alpha=0.5, font_size=13) -> np.ndarray:
+        """Draw bounding boxes on a frame.
+        
+        This method incorporates modifications based on code from the mmrotate repository (OpenMMLab),
+        available at [https://github.com/open-mmlab/mmrotate]. mmrotate is distributed under the Apache 2.0 License.
+
+        Args:
+            frame (np.ndarray): _description_
+            color (str, optional): Matplotlib color or RGBA tuple. Defaults to 'blue'.
+            thickness (int, optional): _description_. Defaults to 2.
+            alpha (float, optional): _description_. Defaults to 0.8.
+
+        Returns:
+            np.ndarray: _description_
+        """
+        
+        width, height = frame.shape[1], frame.shape[0]
+        # region [ Plot Setup ]
+        frame = bgr2rgb(frame)
+        frame = np.ascontiguousarray(frame)
+        fig = plt.figure(frameon=False)
+        canvas = fig.canvas
+        dpi = fig.get_dpi()
+        fig.set_size_inches((width + EPS) / dpi, (height + EPS) / dpi)
+        
+        # remove white edges by set subplot margin
+        plt.subplots_adjust(left=0, right=1, bottom=0, top=1)
+        ax = plt.gca()
+        ax.axis('off')
+        # endregion
+        
+        
+        # Draw bounding boxes
+        polygons = []
+        for detection in self.detections.values():
+            poly = np.int0(np.array([detection.bbox[0:2], 
+                                     detection.bbox[2:4], 
+                                     detection.bbox[4:6], 
+                                     detection.bbox[6:8]]))
+            polygons.append(Polygon(poly))
+        patches = PatchCollection(polygons, 
+                                  facecolor='none', 
+                                  edgecolors=color, 
+                                  linewidths=thickness, 
+                                  alpha=alpha)
+        ax.add_collection(patches)
+        
+        positions = detection.xywh[:, :2].astype(np.int32) + thickness
+        areas = detection.xywh[:, 2] * detection.xywh[:, 3]
+        scales = 0.5 + (areas - MIN_AREAS) / (MAX_AREAS - MIN_AREAS)
+        scales = np.clip(scales, 0.5, 1.0)
+        
+        for i, (pos, detection) in enumerate(zip(positions, self.detections.values())):
+            label_text = f'{detection.id} | '
+            if detection.score is not None:
+                truncated_score = (detection.score * 100) // 1 / 100
+                label_text += f'{truncated_score:.02f}'
+            font_size_mask = font_size if scales is None else font_size * scales[i]
+            ax.text(pos[0], pos[1], f'{label_text}', 
+                    bbox={
+                        'facecolor': 'black',
+                        'alpha': 0.8,
+                        'pad': 0.7,
+                        'edgecolor': 'none'
+                    },
+                    color='w', 
+                    fontsize=font_size_mask,
+                    verticalalignment='top',
+                    horizontalalignment='left')
+        
+        # Force render the image (for printing to buffer)
+        plt.imshow(frame)
+        
+        stream, _ = canvas.print_to_buffer()
+        buffer = np.frombuffer(stream, dtype='uint8')
+        img_rgba = buffer.reshape(height, width, 4)
+        rgb, alpha = np.split(img_rgba, [3], axis=2)
+        frame = rgb.astype('uint8')
+        frame = rgb2bgr(frame)
+        
+        return frame

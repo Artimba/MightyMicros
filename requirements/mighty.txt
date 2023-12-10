@@ -1,6 +1,8 @@
 pykalman
 pyqt5
-jupyter
+requests==2.28.2
+jupyterlab-server==2.19.0
+notebook==6.4.13
 tensorboard
 opencv-python
 opencv-contrib-python
