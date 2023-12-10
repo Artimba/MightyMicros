@@ -16,7 +16,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger('YOLO_Detection')
+logger = logging.getLogger('Detection_Model')
 
 
 #sources: 

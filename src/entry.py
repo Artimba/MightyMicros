@@ -8,8 +8,8 @@ from src.ui.head import MightyMicros
 def run():
     logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger('YOLO_Detection')
-    logger.info('Starting YOLO_Detection')
+    logger = logging.getLogger('Detection_Model')
+    logger.info('Starting Detection_Model')
     app = QApplication(argv)
     gui = MightyMicros()
     gui.show()
