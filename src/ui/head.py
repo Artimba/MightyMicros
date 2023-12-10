@@ -513,16 +513,16 @@ class PopUpWindow(QtWidgets.QWidget):
         self.okBtn = QtWidgets.QPushButton()
         vlayout.addWidget(self.okBtn)
 
-        self.missSlicesLabel = QtWidgets.QLabel()
-        vlayout.addWidget(self.missSlicesLabel)
+        # self.missSlicesLabel = QtWidgets.QLabel()
+        # vlayout.addWidget(self.missSlicesLabel)
 
-        self.yesBtn = QtWidgets.QPushButton()
-        vlayout.addWidget(self.yesBtn)
-        self.yesBtn.hide()
+        # self.yesBtn = QtWidgets.QPushButton()
+        # vlayout.addWidget(self.yesBtn)
+        # self.yesBtn.hide()
 
-        self.noBtn = QtWidgets.QPushButton()
-        vlayout.addWidget(self.noBtn)
-        self.noBtn.hide()
+        # self.noBtn = QtWidgets.QPushButton()
+        # vlayout.addWidget(self.noBtn)
+        # self.noBtn.hide()
 
         self.typeSlicesLabel = QtWidgets.QLabel()
         vlayout.addWidget(self.typeSlicesLabel)
@@ -548,17 +548,16 @@ class PopUpWindow(QtWidgets.QWidget):
         # region [ Set Text ]
         self.labelGrid.setText("Enter grid number:")
         self.okBtn.setText("Ok")
-        self.yesBtn.setText("Yes")
-        self.noBtn.setText("No")
+        #self.yesBtn.setText("Yes")
+        #self.noBtn.setText("No")
         self.okBtn2.setText("Ok")
-        self.typeSlicesLabel.setText("Type the numbers of the slices that were picked up on grid " + str(self.gridNum) + " separated by a comma (ex: 3, 4, 5).")
-
+        
         # endregion
 
         # region [ Signals ]
         self.okBtn.clicked.connect(self.clickOk)
-        self.yesBtn.clicked.connect(self.clickYes)
-        self.noBtn.clicked.connect(self.clickNo)
+        #self.yesBtn.clicked.connect(self.clickYes)
+        #self.noBtn.clicked.connect(self.clickNo)
         self.okBtn2.clicked.connect(self.clickOk2)
         
         
@@ -566,21 +565,26 @@ class PopUpWindow(QtWidgets.QWidget):
 
     def clickOk(self):
         self.gridNum = self.gridSpinBox.value()
+        self.typeSlicesLabel.setText("Type the numbers of the slices that were picked up on grid " + str(self.gridNum) + " separated by a comma (ex: 3, 4, 5).")
 
-        self.missSlicesLabel.setText("The following slices seem to be the slices picked up on the grid: 3, 4, 5. Is this correct?")
-        self.yesBtn.show()
-        self.noBtn.show()
-
-
-    def clickYes(self): 
-        self.output1.append("Slices 3, 4, and 5 picked up on Grid " + str(self.gridNum))
-        self.output2.append("Slices 3, 4, and 5 picked up on Grid " + str(self.gridNum))
-        self.close()
-
-    def clickNo(self): 
-        self.typeSlicesLabel.show()
+        self.typeSlicesLabel.show() 
         self.typeSlicesLineEdit.show()
         self.okBtn2.show()
+
+        #self.missSlicesLabel.setText("The following slices seem to be the slices picked up on the grid: 3, 4, 5. Is this correct?")
+        #self.yesBtn.show()
+        #self.noBtn.show()
+
+
+    # def clickYes(self): 
+    #     self.output1.append("Slices 3, 4, and 5 picked up on Grid " + str(self.gridNum))
+    #     self.output2.append("Slices 3, 4, and 5 picked up on Grid " + str(self.gridNum))
+    #     self.close()
+
+    # def clickNo(self): 
+    #     self.typeSlicesLabel.show()
+    #     self.typeSlicesLineEdit.show()
+    #     self.okBtn2.show()
 
     def clickOk2(self): 
         self.sliceNums = self.typeSlicesLineEdit.text()
