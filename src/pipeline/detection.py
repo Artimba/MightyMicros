@@ -267,12 +267,11 @@ class DetectionManager:
         width, height = frame.shape[1], frame.shape[0]
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = np.ascontiguousarray(frame)
-        fig = plt.figure(frameon=False)
+        fig, ax = plt.subplots(frameon=False)
         canvas = fig.canvas
         dpi = fig.get_dpi()
         fig.set_size_inches((width + EPS) / dpi, (height + EPS) / dpi)
-        plt.subplots_adjust(left=0, right=1, bottom=0, top=1)
-        ax = plt.gca()
+        # plt.subplots_adjust(left=0, right=1, bottom=0, top=1)
         ax.axis('off')
 
         positions_list = []
@@ -311,7 +310,7 @@ class DetectionManager:
                     verticalalignment='top',
                     horizontalalignment='left')
 
-        plt.imshow(frame)
+        ax.imshow(frame)
         
         stream, _ = canvas.print_to_buffer()
         buffer = np.frombuffer(stream, dtype='uint8')
@@ -320,6 +319,6 @@ class DetectionManager:
         frame = rgb.astype('uint8')
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         
-        plt.close()
+        plt.close(fig)
         
         return frame

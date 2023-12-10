@@ -6,14 +6,19 @@ from PyQt5.QtMultimediaWidgets import *
 from PyQt5.QtMultimedia import *
 import cv2
 import numpy as np
-from sys import settrace
-
+from sys import settrace, stdout, stderr
+import queue
 
 from src import PROJECT_ROOT
-from src.pipeline.detection import Model
+from src.pipeline.model import Model
+# from src.entry import StreamToLogger
 
 
+import logging
 
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('YOLO_Detection')
 
 
 def my_tracer(frame, event, arg = None): 
@@ -30,64 +35,109 @@ def my_tracer(frame, event, arg = None):
   
     return my_tracer
 
-#settrace(my_tracer)
 
-#class for a thread to display video and write video to a file 
-class Thread1(QThread):
+
+# def draw_text(image, number, position=(50, 50), font_scale=1, color=(255, 0, 0), thickness=2, font=cv2.FONT_HERSHEY_SIMPLEX):
+#     """
+#     Draw a number as text on an image using OpenCV.
+
+#     :param image: The image on which to draw the text.
+#     :param number: The number to be drawn as text.
+#     :param position: The position where the text starts (bottom-left corner).
+#     :param font_scale: Font scale factor that is multiplied by the font-specific base size.
+#     :param color: Color of the text in BGR format (blue, green, red).
+#     :param thickness: Thickness of the lines used to draw the text.
+#     :param font: Font type.
+#     :return: Image with the number drawn as text.
+#     """
+#     # Convert the number to a string
+#     text = str(number)
+
+#     # Put the text on the image
+#     image = cv2.putText(image, text, position, font, font_scale, color, thickness)
+
+#     return image
+
+
+class VideoThread(QThread):
+    frame_signal = pyqtSignal(QImage)
+    camera_failed_signal = pyqtSignal(int)
     
-
-    def __init__(self, videoNumber: int, frame: np.ndarray, parent = None):
-        super(Thread1, self).__init__(parent)
-        self.videoNumber = videoNumber
-        self.ThreadActive = True 
-        
-        self.frame = frame
-
-    def run(self):
-        
-        # This is used over just a string for OS interoperability
-        
-        self.Fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        self.Output = cv2.VideoWriter('video_recording_1_'+str(self.videoNumber)+'.mp4', self.Fourcc, 15, (640, 480))
-
-
-        while self.ThreadActive: 
-            frame1 = cv2.cvtColor(self.frame, cv2.COLOR_RGB2BGR)
-            self.Output.write(frame1)
-       
-
-    def stop(self):
-        self.ThreadActive = False
-        self.Output.release()
-        self.quit()
-        
-#class for a thread to display video and write video to a file 
-#recording the camera feed that is on the right hand side is not working for some reason 
-class Thread2(QThread):
-
-    def __init__(self, videoNumber: int, frame: np.ndarray, parent = None):
-        super(Thread2, self).__init__(parent)
-        self.videoNumber = videoNumber
-        self.ThreadActive = True #- see if commenting this out works
- 
-        self.frame = frame
-
-    def run(self):
-        
-        # This is used over just a string for OS interoperability
+    def __init__(self, camera_index: int, output1: QTextEdit, parent=None):
+        super().__init__()
+        self.camera = cv2.VideoCapture(camera_index)
+        self.camera_index = camera_index
+        self.model = Model(os.path.join(PROJECT_ROOT, 'pipeline', 'weights', 'epoch_30.pth'))
+        self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
+        self.thread_active = True
+        self.video_writer = None
+        self.is_recording = False
+        self.numSlices = 1
+        self.currentSlicesFrame = [0]
+        self.output1 = output1
+        self.setObjectName(f"VideoThread_{camera_index}")
+        logger.info(f'VideoThread initialized with camera index {self.camera_index}')
     
-        self.Fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        self.Output = cv2.VideoWriter('video_recording_2_'+str(self.videoNumber)+'.mp4', self.Fourcc, 15, (640, 480))
+    def run(self):
+        logging.info(f'VideoThread running')
+        while self.thread_active:
+            success, frame = self.camera.read()
+            if success:
+                frame = cv2.resize(frame, (640, 480))
+                annotated_frame = self.model.predict(frame)
+   
+                #output slice number detected to console
+                if self.camera_index == 0: 
+                    num_of_slices = len(self.model.manager.detections)
+                    if num_of_slices not in self.currentSlicesFrame: 
+                        slices_to_add = num_of_slices - max(self.currentSlicesFrame)
+                        for i in range(0, slices_to_add):
+                            self.output1.append("Slice " + str(self.numSlices) + " detected" )
+                            self.numSlices +=1
+                    self.currentSlicesFrame.append(num_of_slices)
 
-
-        while self.ThreadActive: 
-
-                   
-            frame2 = cv2.cvtColor(self.frame, cv2.COLOR_RGB2BGR)
-            self.Output.write(frame2)
-
+                if self.is_recording:
+                    try:
+                        self.video_writer.write(annotated_frame)
+                    except Exception as e:
+                        logger.info(f'Error writing frame to video file: {e}')
+                        self.stop_recording()
+                        
+                annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
+                qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888)
+                qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio)
+                self.frame_signal.emit(qt_frame)
+            
+            # This was an attempt to fix the camera freezing midway through issue
+            if self.camera.isOpened() == False:
+                self.camera.release()
+                logger.info(f'released camera {self.camera_index}')
+                self.camera_failed_signal.emit(self.camera_index)
+    
+    
+    
+    def start_recording(self, video_number: int):
+        logger.info(f"Camera {self.camera_index} starting recording")
+        if not self.is_recording:
+            # TODO: Hardcoded 0 for camera number because camera_index is currently a path to a data file for testing. Should be set back to {self.camera_index} when we are using real cameras.
+            self.video_writer = cv2.VideoWriter(os.path.join(self.save_path, f'video_recording_{self.camera_index}_{video_number}.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), 10, (640, 480))
+            logger.info(f"Video Writer Initialized: {self.video_writer}")
+            self.is_recording = True
+            
+    def stop_recording(self):
+        logger.info(f"Camera {self.camera_index} stopping recording")
+        if self.is_recording:
+            logger.info("Video Writer Released")
+            self.is_recording = False
+            self.video_writer.release()
+            self.video_writer = None
+    
     def stop(self):
-        self.ThreadActive = False
-        self.Output.release()
+        self.thread_active = False
+        self.camera.release()
+        try:
+            self.video_writer.release()
+        except Exception as e:
+            pass
         self.quit()
-        
+        self.wait()
