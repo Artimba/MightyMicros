@@ -30,5 +30,8 @@ if __name__ == '__main__':
             'opencv-python-headless',
             'opencv-contrib-python',
             'tqdm'
+            'mmcv-full==1.7.1',
+            'mmdet==2.28.2',
+            'mmrotate==0.3.4'
         ]
         )
