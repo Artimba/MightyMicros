@@ -7,6 +7,7 @@ from torch import Tensor
 import cv2
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
+from matplotlib.colors import to_rgb
 import matplotlib.pyplot as plt
 from mmcv import bgr2rgb, rgb2bgr
 
@@ -121,7 +122,7 @@ class DetectionManager:
                                               bbox=bboxes[i, 0:8], 
                                               bbox_norm=bbox_norms[i, 0:8], 
                                               score=bboxes[i, 8], 
-                                              xywh=results[0][0:4],
+                                              xywh=results[0][i, 0:4],
                                               centroid_norm=centroid_norm))
         
         for new_detection in frame_detections:
@@ -133,9 +134,9 @@ class DetectionManager:
         
         for detection in frame_detections:
             self.add(detection)
-        color = (138 / 255, 43 / 255, 226 / 255)
+        color = (138, 43, 226)
         frame = self.draw_bboxes(frame, color=color)
-        
+
         # Frame updated with bboxs that have id's overlayed (inside the bbox).
         return frame
     
@@ -261,59 +262,37 @@ class DetectionManager:
         
 
         return (bboxes_coordinates, normalized_bboxes)
-    
-    def draw_bboxes(self, frame: np.ndarray,  color='blue', thickness=2, alpha=0.5, font_size=13) -> np.ndarray:
-        """Draw bounding boxes on a frame.
-        
-        This method incorporates modifications based on code from the mmrotate repository (OpenMMLab),
-        available at [https://github.com/open-mmlab/mmrotate]. mmrotate is distributed under the Apache 2.0 License.
 
-        Args:
-            frame (np.ndarray): _description_
-            color (str, optional): Matplotlib color or RGBA tuple. Defaults to 'blue'.
-            thickness (int, optional): _description_. Defaults to 2.
-            alpha (float, optional): _description_. Defaults to 0.8.
-
-        Returns:
-            np.ndarray: _description_
-        """
-        
+    def draw_bboxes(self, frame: np.ndarray, color=(0,255,0), thickness=2, alpha=0.5, font_size=13) -> np.ndarray:
         width, height = frame.shape[1], frame.shape[0]
-        # region [ Plot Setup ]
-        frame = bgr2rgb(frame)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = np.ascontiguousarray(frame)
         fig = plt.figure(frameon=False)
         canvas = fig.canvas
         dpi = fig.get_dpi()
         fig.set_size_inches((width + EPS) / dpi, (height + EPS) / dpi)
-        
-        # remove white edges by set subplot margin
         plt.subplots_adjust(left=0, right=1, bottom=0, top=1)
         ax = plt.gca()
         ax.axis('off')
-        # endregion
-        
-        
-        # Draw bounding boxes
-        polygons = []
+
+        positions_list = []
+        areas_list = []
+
         for detection in self.detections.values():
-            poly = np.int0(np.array([detection.bbox[0:2], 
-                                     detection.bbox[2:4], 
-                                     detection.bbox[4:6], 
-                                     detection.bbox[6:8]]))
-            polygons.append(Polygon(poly))
-        patches = PatchCollection(polygons, 
-                                  facecolor='none', 
-                                  edgecolors=color, 
-                                  linewidths=thickness, 
-                                  alpha=alpha)
-        ax.add_collection(patches)
-        
-        positions = detection.xywh[:, :2].astype(np.int32) + thickness
-        areas = detection.xywh[:, 2] * detection.xywh[:, 3]
+            bbox = detection.bbox.astype(np.int32).reshape((-1, 1, 2))
+            cv2.polylines(frame, [bbox], isClosed=True, color=color, thickness=thickness)
+
+            posi = detection.xywh[:2].astype(np.int32) + thickness
+            positions_list.append(posi)
+
+            area = (detection.xywh[3] - detection.xywh[1]) * (detection.xywh[2] - detection.xywh[0])
+            areas_list.append(area)
+
+        positions = np.array(positions_list)
+        areas = np.array(areas_list)
         scales = 0.5 + (areas - MIN_AREAS) / (MAX_AREAS - MIN_AREAS)
         scales = np.clip(scales, 0.5, 1.0)
-        
+
         for i, (pos, detection) in enumerate(zip(positions, self.detections.values())):
             label_text = f'{detection.id} | '
             if detection.score is not None:
@@ -331,8 +310,7 @@ class DetectionManager:
                     fontsize=font_size_mask,
                     verticalalignment='top',
                     horizontalalignment='left')
-        
-        # Force render the image (for printing to buffer)
+
         plt.imshow(frame)
         
         stream, _ = canvas.print_to_buffer()
@@ -340,6 +318,8 @@ class DetectionManager:
         img_rgba = buffer.reshape(height, width, 4)
         rgb, alpha = np.split(img_rgba, [3], axis=2)
         frame = rgb.astype('uint8')
-        frame = rgb2bgr(frame)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        
+        plt.close()
         
         return frame

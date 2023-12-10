@@ -30,6 +30,10 @@ while cap.isOpened():
         key = cv2.waitKey(1)  # Wait indefinitely for a key press
         if key == ord("q"):
             break
+        # elif key == 32:
+        #     continue
+        elif key == ord("s"):
+            cv2.imwrite("output.png", frame)
     else:
         # Break the loop if the end of the video is reached
         break
