@@ -170,3 +170,4 @@ runs/*
 launch.json
 output_*.json
 *.pth
+data/*
