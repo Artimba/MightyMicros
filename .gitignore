@@ -166,3 +166,6 @@ converter/
 training/
 *.mp4
 .DS_Store
+data/*
+src/pipeline/weights/*.pth
+src/pipeline/weights/*.pt
