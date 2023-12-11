@@ -1,6 +1,7 @@
 # from ultralytics import YOLO
 from pathlib import Path
 import importlib.resources as pkg
+import cv2
 import torch
 import mmcv
 from mmcv.runner import load_checkpoint
@@ -70,18 +71,17 @@ class Model(object):
         
         self.database = []
         self.manager = DetectionManager()
+        
+        self.frame_count = 0
     
     def predict(self, frame):
-
-        detection_results = inference_detector(self.model, frame)
-        frame = self.manager.handle_frame(detection_results, frame)
-        # frame = self.model.show_result(frame.copy(), detection_results, show=False)
-        # frame = self.manager.handle_frame(detection_results[0].boxes, frame)
-        # print(detection_results)
-        # print(type(detection_results[0].boxes))
-        # for i, bbox in enumerate(detection_results[0].boxes.xyxy):
-        #     Detection(bbox, detection_results[0].boxes.xyxyn[i], self.database)
-        # print('detections: ', len(self.database))
+        frame = cv2.resize(frame, (640, 480))
+        if self.frame_count % 10 == 0:
+            detection_results = inference_detector(self.model, frame)
+            frame = self.manager.handle_detect(detection_results, frame)
+        else:
+            frame = self.manager.handle_track(frame)
+        self.frame_count += 1
         return frame
         
     

@@ -13,6 +13,12 @@ from mmcv import bgr2rgb, rgb2bgr
 
 from src.pipeline.kalman import KalmanFilter
 
+import logging
+
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('Detection_Model')
+
 COORDINATES = 9 # Amount of coordinates in a bounding box + score
 EPS = 1e-2 # Epsilon value for matplotlib scale wiggling
 EPS2 = 1e-5 # Epsilon value for numpy.isclose()
@@ -54,6 +60,7 @@ class Detection:
     centroid_norm: np.ndarray
     score: float
     kalman_filter: KalmanFilter = None
+    tracker: cv2.Tracker = None
     neighbors: Dict[str, Optional['Detection']] = field(default_factory=lambda: {
         'N': None, 
         'NE': None, 
@@ -104,7 +111,7 @@ class DetectionManager:
         self.next_id = 1
         self.delta_t = frame_rate ** -1
         
-    def handle_frame(self, results, frame: np.ndarray) -> np.ndarray:
+    def handle_detect(self, results, frame: np.ndarray) -> np.ndarray:
         self.detections = {} # TEMPORARY
         self.next_id = 1 # TEMPORARY
         bboxes, bbox_norms = self.handle_results(results, (frame.shape[1], frame.shape[0]))
@@ -139,6 +146,39 @@ class DetectionManager:
 
         # Frame updated with bboxs that have id's overlayed (inside the bbox).
         return frame
+    
+    def handle_track(self, frame):
+        for detection in self.detections.values():
+            width, height = detection.xywh[2], detection.xywh[3]
+            half_width, half_height = width / 2, height / 2
+            roi = (detection.xywh[0] - half_width, detection.xywh[1] - half_height, width, height)
+            roi = int(roi[0]), int(roi[1]), int(roi[2]), int(roi[3])
+            if detection.tracker is None:
+                detection.tracker = cv2.TrackerCSRT_create()
+                detection.tracker.init(frame, roi)
+
+            success, x1y1wh = detection.tracker.update(frame)
+            if success:
+                # CV2 Returns (x1, y1, width, height)
+                # Convert to (x1, y1, x2, y2, x3, y3, x4, y4)
+                x1, y1 = x1y1wh[:2]
+                x2, y2 = x1 + x1y1wh[2], y1
+                x3, y3 = x2, y2 + x1y1wh[3]
+                x4, y4 = x1, y3
+                xyxy = np.array([x1, y1, x2, y2, x3, y3, x4, y4])
+                # Normalize
+                xyxyn = xyxy / np.array([frame.shape[1], frame.shape[0]] * 4)
+                # Convert to (center_x, center_y, width, height)
+                xywh = np.array([(x1 + x2) / 2, (y1 + y3) / 2, width, height])
+                
+                detection.bbox = xyxy
+                detection.bbox_norm = xyxyn
+                detection.xywh = xywh
+                frame = self.draw_bboxes(frame, (120, 30, 200))
+                return frame
+            else:
+                # TODO: Tracking lost. Detection should run to attempt a re-find.
+                pass
     
     def generate_neighbors(self, frame_detections):
         # Look at each bbox inside frame_detections. Compare against every other bbox. Use distance and angle (relative to currently processing detection) to calculate neighbors.

@@ -123,7 +123,12 @@ class VideoThread(QThread):
             # TODO: Hardcoded 0 for camera number because camera_index is currently a path to a data file for testing. Should be set back to {self.camera_index} when we are using real cameras.
             with self.save_path as save_path:
                 Path(save_path).mkdir(parents=True, exist_ok=True)
-                self.video_writer = cv2.VideoWriter(os.path.join(save_path, f'video_recording_{self.camera_index}_{video_number}.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), 10, (640, 480))
+                logger.info(os.path.join(str(save_path), f'video_recording_{self.camera_index}_{video_number}.mp4'))
+                # self.video_writer = cv2.VideoWriter(os.path.join(str(save_path), f'video_recording_{self.camera_index}_{video_number}.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), 10, (640, 480))
+                if self.camera_index == 'data/20231017_120545.mp4':
+                    self.video_writer = cv2.VideoWriter(os.path.join(str(save_path), f'video_recording_0_{video_number}.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), 10, (640, 480))
+                else:
+                    self.video_writer = cv2.VideoWriter(os.path.join(str(save_path), f'video_recording_1_{video_number}.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), 10, (640, 480))
             logger.info(f"Video Writer Initialized: {self.video_writer}")
             self.is_recording = True
             
