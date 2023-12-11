@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from PyQt5.QtGui import * 
 from PyQt5.QtWidgets import * 
 from PyQt5.QtCore import * 
@@ -8,6 +9,7 @@ import cv2
 import numpy as np
 from sys import settrace, stdout, stderr
 import queue
+import importlib.resources as pkg
 
 from src import PROJECT_ROOT
 from src.pipeline.model import Model
@@ -68,8 +70,10 @@ class VideoThread(QThread):
         super().__init__()
         self.camera = cv2.VideoCapture(camera_index)
         self.camera_index = camera_index
-        self.model = Model(os.path.join(PROJECT_ROOT, 'pipeline', 'weights', 'model.pth'))
-        self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
+        # self.model = Model(os.path.join(PROJECT_ROOT, 'pipeline', 'weights', 'model.pth'))
+        self.model = Model()
+        # self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
+        self.save_path = pkg.path('src.recordings', '')
         self.thread_active = True
         self.video_writer = None
         self.is_recording = False
@@ -117,7 +121,9 @@ class VideoThread(QThread):
         logger.info(f"Camera {self.camera_index} starting recording")
         if not self.is_recording:
             # TODO: Hardcoded 0 for camera number because camera_index is currently a path to a data file for testing. Should be set back to {self.camera_index} when we are using real cameras.
-            self.video_writer = cv2.VideoWriter(os.path.join(self.save_path, f'video_recording_{self.camera_index}_{video_number}.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), 10, (640, 480))
+            with self.save_path as save_path:
+                Path(save_path).mkdir(parents=True, exist_ok=True)
+                self.video_writer = cv2.VideoWriter(os.path.join(save_path, f'video_recording_{self.camera_index}_{video_number}.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), 10, (640, 480))
             logger.info(f"Video Writer Initialized: {self.video_writer}")
             self.is_recording = True
             

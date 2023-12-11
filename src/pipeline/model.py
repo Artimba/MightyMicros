@@ -1,5 +1,6 @@
 # from ultralytics import YOLO
 from pathlib import Path
+import importlib.resources as pkg
 import torch
 import mmcv
 from mmcv.runner import load_checkpoint
@@ -8,53 +9,38 @@ from mmrotate.models import build_detector
 
 from src.pipeline.detection import DetectionManager
 from src import PROJECT_ROOT
+import logging
 
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('Detection_Model')
 class Model(object):
 
-    def __init__(self, model: str = 'latest.pth'):
-        # # self.model = YOLO(model_path)
-        # # self.model = torch.hub.load('/home/sky/yolov5_obb', 'custom', path='/home/sky/yolov5_obb/runs/train/exp26/weights/best.pt', source='local')
-        
-        # self.cfg = mmcv.Config.fromfile(str(Path(PROJECT_ROOT, 'pipeline', 'configs', 'oriented_rcnn_r50_fpn_1x_dota_le90.py')))
-        # self.cfg = mmcv.Config.fromfile(PROJECT_ROOT + '\oriented_rcnn_r50_fpn_1x_dota_le90.py')
-        # self.cfg.model.pretrained = None
-        # self.cfg.dataset_type = 'MIGHTYDataset'
-        # # self.cfg.data_root = '/home/sky/datasets/obb_split/'
-
-        # # self.cfg.data.test.type = 'MIGHTYDataset'
-        # # self.cfg.data.test.data_root = '/home/sky/datasets/obb_split/'
-        # # self.cfg.data.test.ann_file = 'val'
-        # # self.cfg.data.test.img_prefix = 'images'
-
-        # self.cfg.model.roi_head.bbox_head.num_classes = 1
-        # if torch.cuda.is_available():
-        #     self.device = 'cuda:0'
-        # else:
-        #     self.device = None
-        
-        # model_checkpoint_path = Path(PROJECT_ROOT, 'pipeline', 'weights', model)
-        # if torch.cuda.is_available():
-        #     self.model_checkpoint = load_checkpoint(self.cfg, str(model_checkpoint_path))
-        # else:
-        #     self.model_checkpoint = load_checkpoint(self.cfg, str(model_checkpoint_path), map_location='cpu')
-
-        # self.model = build_detector(self.cfg, self.model_checkpoint)
-        
-        # if torch.cuda.is_available():
-        #     self.model.to(self.device)
-        
-        # self.model.eval()
-        
+    def __init__(self, model: str = 'model.pth'):      
         # Choose to use a config and initialize the detector
-        config = str(Path(PROJECT_ROOT, 'pipeline', 'configs', 'oriented_rcnn_r50_fpn_1x_dota_le90.py'))
+        # config = str(Path(PROJECT_ROOT, 'pipeline', 'configs', 'oriented_rcnn_r50_fpn_1x_dota_le90.py'))
+        with pkg.path('src.pipeline.configs', 'oriented_rcnn_r50_fpn_1x_dota_le90.py') as config_path:
+            if config_path.exists():
+                config = config_path
+            else:
+                logger.info(f"Config file not found at path {config_path}.")
+                return
         # Setup a checkpoint file to load
-        checkpoint = str(Path(PROJECT_ROOT, 'pipeline', 'weights', model))
-
+        # checkpoint = str(Path(PROJECT_ROOT, 'pipeline', 'weights', model))
+        with pkg.path('src.pipeline.weights', model) as model_path:
+            if model_path.exists():
+                mighty_model = str(model_path)
+            else:
+                logger.info(f"Model binary not found at path {model_path}.")
+                return
+        print(mighty_model)
         # Set the device to be used for evaluation
         if torch.cuda.is_available():
-            device = 'cuda:0'
+            print("CUDA Discovered.")
+            self.device = 'cuda:0'
         else:
-            device='cpu'
+            print("CUDA Not Found. Attempting CPU")
+            self.device='cpu'
 
         # Load the config
         config = mmcv.Config.fromfile(config)
@@ -68,7 +54,7 @@ class Model(object):
         self.model = build_detector(config.model)
 
         # Load checkpoint
-        checkpoint = load_checkpoint(self.model, checkpoint, map_location=device)
+        checkpoint = load_checkpoint(self.model, mighty_model, map_location=self.device)
 
         # Set the classes of models for inference
         self.model.CLASSES = checkpoint['meta']['CLASSES']
@@ -77,8 +63,8 @@ class Model(object):
         self.model.cfg = config
 
         # Convert the model to GPU
-        if torch.cuda.is_available():
-            self.model.to(device)
+        # if torch.cuda.is_available():
+        self.model.to(self.device)
         # Convert the model into evaluation mode
         self.model.eval()
         
@@ -86,6 +72,7 @@ class Model(object):
         self.manager = DetectionManager()
     
     def predict(self, frame):
+
         detection_results = inference_detector(self.model, frame)
         frame = self.manager.handle_frame(detection_results, frame)
         # frame = self.model.show_result(frame.copy(), detection_results, show=False)

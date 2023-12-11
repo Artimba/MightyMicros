@@ -6,6 +6,7 @@ from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 import sys
 import os
 import cv2
+import importlib.resources as pkg
 
 
 from src.ui.main_ui import Ui_MainWindow
@@ -36,7 +37,8 @@ class MightyMicros(QtWidgets.QMainWindow):
 
         self.video_threads = []
         self.camera_index = 0
-        self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
+        # self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
+        self.save_path = pkg.path('src.recordings', '')
         self.temp_data = ['data/20231017_120545.mp4', 'data/20231017_122937.mp4']
 
         # Change/add any property about ui here
@@ -362,9 +364,10 @@ class MightyMicros(QtWidgets.QMainWindow):
         for i in cb_value: 
             if i.isdigit():
                 num += i
-
-        self.mediaPlayer1.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(os.path.join(self.save_path, f'video_recording_0_{num}.mp4'))))
-        self.mediaPlayer2.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(os.path.join(self.save_path, f'video_recording_1_{num}.mp4'))))
+        with self.save_path as save_path:
+            save_path.mkdir(parents=True, exist_ok=True)
+            self.mediaPlayer1.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(os.path.join(save_path, f'video_recording_0_{num}.mp4'))))
+            self.mediaPlayer2.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(os.path.join(save_path, f'video_recording_1_{num}.mp4'))))
 
         self.ui.pushButton_2.setEnabled(True)
         self.ui.pushButton_5.setEnabled(True)

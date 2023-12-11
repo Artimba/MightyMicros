@@ -2,31 +2,34 @@ import requests
 from tqdm import tqdm
 from pathlib import Path
 from src import PROJECT_ROOT
+import importlib.resources as pkg
 
 def download_from_drive(file_id='1thB3okTAkVC35DWRP68E3CR_feIavcov', destination=None):
     
     if destination is None:
-        root_dir = Path(PROJECT_ROOT, 'pipeline', 'weights', 'model.pth')
-    else:
-        root_dir = Path(destination)
-    print(f"Searching for detection model at {str(root_dir)}...")
-    if root_dir.exists():
-        print(f"Model found at {destination}")
-        return
-    else:
-        print(f"Downloading file from Google Drive with id {file_id} to {str(root_dir)}")
+        with pkg.path('src.pipeline.weights', '') as weights_path:
+            print(f"Searching for detection model at {str(weights_path)}...")
+            model_path = Path(weights_path, 'model.pth')
+            if model_path.exists():
+                print(f"Model found at {model_path}")
+                return weights_path  # Assuming you want to return the path
+            else:
+                print(f"Downloading file from Google Drive with id {file_id} to {str(weights_path)}")
         
     URL = f"https://drive.google.com/uc?export=download"
     
     session = requests.Session()
-    response = session.get(URL, params={'id': file_id}, stream=True)
+    # response = session.get(URL, params={'id': file_id}, stream=True)
+    # TODO: This is a bad patch. The confirm code might change, google drive will eventually block downloads. Need to find a different distribution method.
+    response = session.get('https://drive.google.com/uc?export=download&id=1thB3okTAkVC35DWRP68E3CR_feIavcov&confirm=t&uuid=cc0117f3-cef1-45a7-9bbe-503ce5fbd52c&at=AB6BwCAEPIPgC_Q-dNgVjAOuR205:1702253631384')
     token = get_confirm_token(response)
     
     if token:
+        print("Warning found. Bypassing.")
         params = {'id': file_id, 'confirm': token}
         response = session.get(URL, params=params, stream=True)
     
-    save_response_content(response, str(root_dir))
+    save_response_content(response, str(model_path))
 
 def get_confirm_token(response):
     for key, value in response.cookies.items():
