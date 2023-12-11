@@ -46,7 +46,7 @@ class VideoThread(QThread):
         super().__init__()
         self.camera = cv2.VideoCapture(camera_index)
         self.camera_index = camera_index
-        self.model = Model(os.path.join(PROJECT_ROOT, 'pipeline', 'runs/detect/train4/weights/best.pt'), output1, output2)
+        self.model = Model(os.path.join(PROJECT_ROOT, 'pipeline', 'runs/detect/train5/weights/best.pt'), output1, output2)
         self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
         self.thread_active = True
         self.video_writer = None
@@ -65,7 +65,10 @@ class VideoThread(QThread):
             if success:
                 frame = cv2.resize(frame, (640, 480))
                 #results = self.model.track(frame)
-                annotated_frame, results = self.model.predict(frame)
+                if self.camera_index == 1: 
+                    annotated_frame, results = self.model.predict(frame)
+                else: 
+                    annotated_frame = frame
                 #annotated_frame = results[0].plot(labels=False, masks=False)
 
                 
