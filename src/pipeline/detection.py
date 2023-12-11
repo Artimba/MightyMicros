@@ -174,11 +174,12 @@ class DetectionManager:
                 detection.bbox = xyxy
                 detection.bbox_norm = xyxyn
                 detection.xywh = xywh
-                frame = self.draw_bboxes(frame, (120, 30, 200))
-                return frame
+
             else:
                 # TODO: Tracking lost. Detection should run to attempt a re-find.
                 pass
+        frame = self.draw_bboxes(frame, (200, 30, 150))
+        return frame
     
     def generate_neighbors(self, frame_detections):
         # Look at each bbox inside frame_detections. Compare against every other bbox. Use distance and angle (relative to currently processing detection) to calculate neighbors.
