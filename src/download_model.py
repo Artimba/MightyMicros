@@ -6,7 +6,7 @@ import importlib.resources as pkg
 def download_from_drive(file_id='1EqGxndfMEqUc26kndfm95jjQg9dEOLXY', destination=None):
     
     if destination is None:
-        with pkg.path('src.pipeline.weights', '') as weights_path:
+        with pkg.files('src.pipeline.weights') as weights_path:
             print(f"Searching for detection model at {str(weights_path)}...")
             model_path = Path(weights_path, 'model.pt')
             if model_path.exists():
