@@ -26,9 +26,10 @@ This is a quick script that can be used to take an image and run one of our mode
 
 import cv2
 from ultralytics import YOLO
+from src.pipeline.model import Model
 
 # Load the YOLOv8 model
-model = YOLO('runs/detect/train7/weights/best.pt')
+model = Model()
 
 # Open the video file
 video_path = "data/20231017_132531.mp4"
@@ -42,10 +43,10 @@ while cap.isOpened():
     if success:
         frame = cv2.resize(frame, (640, 480)) 
         # Run YOLOv8 inference on the frame
-        results = model(frame, verbose=False)
+        annotated_frame = model.predict(frame)
 
         # Visualize the results on the frame
-        annotated_frame = results[0].plot(labels=False, masks=False)
+        # annotated_frame = results[0].plot(labels=False, masks=False)
 
         # Display the annotated frame
         cv2.imshow("YOLOv8 Inference", annotated_frame)
