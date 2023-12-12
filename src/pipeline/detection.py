@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 from ultralytics.engine.results import Boxes
 from math import atan2, hypot
 import cv2
@@ -44,8 +44,11 @@ def get_direction(angle: float) -> str:
 @dataclass
 class Detection:
     id: int
-    bbox: Tensor
-    bbox_norm: Tensor
+    bbox: np.ndarray
+    bbox_norm: np.ndarray
+    xywh: np.ndarray
+    centroid_norm: np.ndarray
+    score: float
     kalman_filter: KalmanFilter = None
     neighbors: Dict[str, Optional['Detection']] = field(default_factory=lambda: {
         'N': None, 
@@ -97,8 +100,13 @@ class DetectionManager:
         self.next_id = 1
         self.delta_t = frame_rate ** -1
         
-    def handle_frame(self, results: Boxes, frame: np.ndarray) -> np.ndarray:
+    def handle_frame(self, results: Union[Boxes, np.ndarray], frame: np.ndarray) -> np.ndarray:
         
+        if isinstance(results, Boxes):
+            # Convert to (x1, y1, x2, y2, x3, y3, x4, y4) format.
+            results = results.xyxy[0]
+            
+        print(results)
         frame_detections = []
         
         # Run a prediction on currently managed detections to get estimate locations for this new frame.

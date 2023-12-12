@@ -10,7 +10,7 @@ from sys import settrace, stdout, stderr
 import queue
 
 from src import PROJECT_ROOT
-from src.pipeline.detection import Model
+from src.pipeline.model import Model
 # from src.entry import StreamToLogger
 
 
@@ -44,7 +44,7 @@ class VideoThread(QThread):
         super().__init__()
         self.camera = cv2.VideoCapture(camera_index)
         self.camera_index = camera_index
-        self.model = Model(os.path.join(PROJECT_ROOT, 'pipeline', 'runs/detect/train4/weights/best.pt'))
+        self.model = Model()
         self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
         self.thread_active = True
         self.video_writer = None
@@ -58,7 +58,9 @@ class VideoThread(QThread):
             success, frame = self.camera.read()
             if success:
                 frame = cv2.resize(frame, (640, 480))
-                annotated_frame = self.model.predict(frame)[0].plot(labels=False, masks=False)
+                # annotated_frame = self.model.predict(frame)[0].plot(labels=False, masks=False)
+                annotated_frame = self.model.predict(frame)
+                
                 if self.is_recording:
                     try:
                         self.video_writer.write(annotated_frame)

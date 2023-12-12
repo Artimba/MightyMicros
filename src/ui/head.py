@@ -38,7 +38,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.video_threads = []
         self.camera_index = 0
         self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
-        #self.temp_data = ['data/20231017_120545.mp4', 'data/20231017_122937.mp4']
+        self.temp_data = ['data/20231017_120545.mp4', 'data/20231017_122937.mp4']
 
         # Change/add any property about ui here
         self.videoNumber = 1
@@ -263,8 +263,8 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.camera_index = 0
         
         
-        logger.info(f"Initializing Camera {self.camera_index}")
-        camera_thread = VideoThread(self.camera_index)
+        logger.info(f"Initializing Camera {(self.camera_index, self.temp_data[self.camera_index])}")
+        camera_thread = VideoThread((self.camera_index, self.temp_data[self.camera_index]))
         
         camera_thread.camera_failed_signal.connect(camera_thread.stop)
         camera_thread.frame_signal.connect(lambda image, idx=self.camera_index: self.UpdatePixmap(image, idx))
