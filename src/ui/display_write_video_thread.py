@@ -44,8 +44,21 @@ class VideoThread(QThread):
     
     def __init__(self, camera_index: int, output1: QTextEdit, output2: QTextEdit, save_path: str, parent=None):
         super().__init__()
-        self.camera = cv2.VideoCapture(camera_index)
+        #self.camera = cv2.VideoCapture(camera_index)
+
+        #comment out following code block if you don't want recordings to display
+        if camera_index == 0: 
+            self.camera = cv2.VideoCapture(os.path.join(PROJECT_ROOT, 'recordings', 'demo video ui - side angle video slicing.mp4'))
+        elif camera_index == 1: 
+            self.camera = cv2.VideoCapture(os.path.join(PROJECT_ROOT, 'recordings', 'demo video ui - microtome camera slicing.mp4'))
+
+
+        
         self.camera_index = camera_index
+
+
+        
+
         self.model = Model(os.path.join(PROJECT_ROOT, 'pipeline', 'runs/detect/train5/weights/best.pt'), output1, output2)
         #self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
         self.save_path = save_path
