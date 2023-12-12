@@ -336,15 +336,15 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         
         logger.info(f"Initializing Camera {self.camera_index}")
-        camera_thread = VideoThread(self.camera_index, self.output1, self.output2, self.save_path)
+        #camera_thread = VideoThread(self.camera_index, self.output1, self.output2, self.save_path)
         
-        camera_thread.camera_failed_signal.connect(camera_thread.stop)
-        camera_thread.frame_signal.connect(lambda image, idx=self.camera_index: self.UpdatePixmap(image, idx))
+        #camera_thread.camera_failed_signal.connect(camera_thread.stop)
+        #camera_thread.frame_signal.connect(lambda image, idx=self.camera_index: self.UpdatePixmap(image, idx))
         
-        camera_thread.start()
+        #camera_thread.start()
                 
         self.camera_index += 1
-        self.video_threads.append(camera_thread)
+        #self.video_threads.append(camera_thread)
 
 
         

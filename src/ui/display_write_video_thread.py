@@ -47,10 +47,11 @@ class VideoThread(QThread):
         #self.camera = cv2.VideoCapture(camera_index)
 
         #comment out following code block if you don't want recordings to display
-        if camera_index == 0: 
-            self.camera = cv2.VideoCapture(os.path.join(PROJECT_ROOT, 'recordings', 'demo video ui - side angle video slicing.mp4'))
-        elif camera_index == 1: 
-            self.camera = cv2.VideoCapture(os.path.join(PROJECT_ROOT, 'recordings', 'demo video ui - microtome camera slicing.mp4'))
+
+        # if camera_index == 0: 
+        #     self.camera = cv2.VideoCapture(os.path.join(PROJECT_ROOT, 'recordings', 'demo video ui - side angle video slicing.mp4'))
+        # elif camera_index == 1: 
+        #     self.camera = cv2.VideoCapture(os.path.join(PROJECT_ROOT, 'recordings', 'demo video ui - microtome camera slicing.mp4'))
 
 
         
