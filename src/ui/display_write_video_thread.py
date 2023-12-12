@@ -7,7 +7,6 @@ from PyQt5.QtMultimedia import *
 import cv2
 import numpy as np
 from sys import settrace, stdout, stderr
-import queue
 
 from src import PROJECT_ROOT
 from src.pipeline.model import Model
@@ -20,6 +19,8 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('YOLO_Detection')
 
+
+REC_FPS = 30 # FPS for recording videos
 
 def my_tracer(frame, event, arg = None): 
     # extracts frame code 
@@ -36,12 +37,15 @@ def my_tracer(frame, event, arg = None):
     return my_tracer
 
 
+
+
+
 class VideoThread(QThread):
     frame_signal = pyqtSignal(QImage)
     camera_failed_signal = pyqtSignal(int)
     console_signal = pyqtSignal(str)
     
-    def __init__(self, camera_index: int, save_path: str, parent=None):
+    def __init__(self, camera_index: int, save_path: str, do_detections=True, parent=None):
         super().__init__()
         self.camera = cv2.VideoCapture(camera_index[1])
         self.camera_index = camera_index[0]
@@ -50,6 +54,7 @@ class VideoThread(QThread):
         self.thread_active = True
         self.video_writer = None
         self.is_recording = False
+        self.do_detections = do_detections
         self.valid_ids = []
         self.setObjectName(f"VideoThread_{camera_index}")
         logger.info(f'VideoThread initialized with camera index {self.camera_index}')
@@ -57,14 +62,19 @@ class VideoThread(QThread):
     def run(self):
         logging.info(f'VideoThread running')
         while self.thread_active:
+
+            
             success, frame = self.camera.read()
             if success:
                 frame = cv2.resize(frame, (640, 480))
-                annotated_frame = self.model.predict(frame)
-                for detection in self.model.manager.detections.values():
-                    if detection.id not in self.valid_ids:
-                        self.console_signal.emit(f"Camera {self.camera_index} | Slice Found: {detection.id}")
-                        self.valid_ids.append(detection.id)
+                if self.do_detections:
+                    annotated_frame = self.model.predict(frame)
+                    for detection in self.model.manager.detections.values(): 
+                        if detection.id not in self.valid_ids and self.camera_index == 1: # TODO: Remove for prod
+                            self.console_signal.emit(f"Slice Found: {detection.id}")
+                            self.valid_ids.append(detection.id)
+                else:
+                    annotated_frame = frame
                 
                 if self.is_recording:
                     try:
@@ -85,11 +95,12 @@ class VideoThread(QThread):
                 self.camera_failed_signal.emit(self.camera_index)
     
     
+    
     def start_recording(self, video_number: int):
         logger.info(f"Camera {self.camera_index} starting recording")
         if not self.is_recording:
             # TODO: Hardcoded 0 for camera number because camera_index is currently a path to a data file for testing. Should be set back to {self.camera_index} when we are using real cameras.
-            self.video_writer = cv2.VideoWriter(os.path.join(self.save_path, f'video_recording_{self.camera_index}_{video_number}.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), 10, (640, 480))
+            self.video_writer = cv2.VideoWriter(os.path.join(self.save_path, f'video_recording_{self.camera_index}_{video_number}.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), REC_FPS, (640, 480))
             logger.info(f"Video Writer Initialized: {self.video_writer}")
             self.is_recording = True
             

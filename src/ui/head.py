@@ -6,6 +6,7 @@ from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 import sys
 import os
 import cv2
+from pathlib import Path
 
 
 from src.ui.main_ui import Ui_MainWindow
@@ -35,8 +36,13 @@ class MightyMicros(QtWidgets.QMainWindow):
 
         self.video_threads = []
         self.camera_index = 0
-        self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
-        self.temp_data = ['data/20231017_120545.mp4', 'data/20231017_122937.mp4']
+
+        self.save_path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select Folder to Save Files')
+        print(self.save_path)
+        #self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
+        self.textFileNum = 1
+        # self.temp_data = ['data/demo video ui - side angle video slicing.mp4', 'data/demo video ui - microtome camera slicing.mp4']
+        self.temp_data = ['data/output_2.mp4', 'data/output.mp4']
 
         # Change/add any property about ui here
         self.videoNumber = 1
@@ -46,27 +52,9 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.numSlices = 1
         self.isRecord = False
         
-        # region [ Widgets ]
-
-        # region [ Set up camera display ]
-        #self.camera1 = cv2.VideoCapture(1)
-        #self.timer1 = QtCore.QTimer(self)
-        #self.timer1.timeout.connect(self.updateFrame1)
-        #self.timer1.start(30)
-
-        #self.camera2 = cv2.VideoCapture(0)
-        #self.timer2 = QtCore.QTimer(self)
-        #self.timer2.timeout.connect(self.updateFrame2)
-        #self.timer2.start(30)
-        # endregion
-
-    
         # region [ Add widgets]
         self.mediaPlayer1 = QMediaPlayer(self.ui.frame_5, QMediaPlayer.VideoSurface)
         self.videoWidget1 = QVideoWidget()
-        #sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        #sizePolicy.setHorizontalStretch(0)
-        #sizePolicy.setVerticalStretch(0)
         self.mediaPlayer1.setObjectName("media_player1")
         self.ui.horizontalLayout_13.insertWidget(0, self.videoWidget1)
 
@@ -79,27 +67,26 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.output1 = QtWidgets.QTextEdit(self.ui.ConFrame)
         self.output1.setObjectName("output1")
         self.ui.verticalLayout_4.addWidget(self.output1)
+
+        
         self.output2 = QtWidgets.QTextEdit(self.ui.ConFrame_2)
         self.output2.setObjectName("output2")
         self.ui.verticalLayout_7.addWidget(self.output2)
+
+        self.outputConsoleBtn = QtWidgets.QPushButton(self.ui.ConFrame)
+        self.outputConsoleBtn.setObjectName("outputConsole")
+        self.ui.verticalLayout_4.addWidget(self.outputConsoleBtn)
+
+        self.clearConsoleBtn = QtWidgets.QPushButton(self.ui.ConFrame)
+        self.clearConsoleBtn.setObjectName("outputConsole")
+        self.ui.verticalLayout_4.addWidget(self.clearConsoleBtn)
+
 
         self.videoCombo = QtWidgets.QComboBox(self.ui.frame_4)
         self.ui.horizontalLayout_12.addWidget(self.videoCombo)
         
         self.gridBtn = QtWidgets.QPushButton(self.ui.frame_4)
         self.ui.horizontalLayout_12.addWidget(self.gridBtn)
-
-        #self.threadBtn1 = QtWidgets.QPushButton(self.ui.CamLabFrame)
-        #self.ui.horizontalLayout_7.addWidget(self.threadBtn1)
-
-        #self.threadBtn2 = QtWidgets.QPushButton(self.ui.CamLabFrame)
-        #self.ui.horizontalLayout_7.addWidget(self.threadBtn2)
-
-       
-
-        self.popUp = PopUpWindow(self.output2, self)
-
-
         # endregion
 
         # region [ Delete widgets ]
@@ -128,15 +115,13 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.toolButton_6.deleteLater()
         self.ui.toolButton_6= None
 
-        #self.ui.horizontalLayout_15.removeWidget(self.ui.label_7)
-        #self.ui.label_7.deleteLater() 
-        #self.ui.label_7 = None
+        self.ui.horizontalLayout_10.removeWidget(self.ui.label_5)
+        self.ui.label_5.deleteLater()
+        self.ui.label_5 = None
 
-        #self.ui.horizontalLayout_15.removeWidget(self.ui.label_8)
-        #self.ui.label_8.deleteLater() 
-        #self.ui.label_8 = None
-
-
+        self.ui.horizontalLayout_10.removeWidget(self.ui.label_6)
+        self.ui.label_6.deleteLater()
+        self.ui.label_6 = None
         # endregion
         
         # region [ Add slider 1 ]
@@ -166,9 +151,8 @@ class MightyMicros(QtWidgets.QMainWindow):
         # region [ Edit TextEdit Widget]
         self.output1.setReadOnly(True)
         self.output2.setReadOnly(True)
-
-        # endregion
-        # endregion
+        # endregion  
+        
         
         self.ui.tabWidget.setCurrentIndex(0)
         
@@ -178,35 +162,25 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         self.ui.pushButton.clicked.connect(self.ClickBTN)
         self.gridBtn.clicked.connect(self.gridPopUp)
-        
-        #self.Thread1 = Thread1(self.videoNumber, False)
-        #self.Thread1.start()
-        #self.Thread1.ImageUpdate.connect(self.ImageUpdateSlot1)
-        
-        #self.Thread2 = Thread2(self.videoNumber, False)
-        #self.Thread2.start()
-        #self.Thread2.ImageUpdate.connect(self.ImageUpdateSlot2)
-
-        self.ui.pushButton_2.clicked.connect(self.playVideo1)
-        
+        self.clearConsoleBtn.clicked.connect(self.clickClear)
+        self.outputConsoleBtn.clicked.connect(self.clickWrite)
+        self.ui.pushButton_2.clicked.connect(self.playVideo1)      
         self.mediaPlayer1.setVideoOutput(self.videoWidget1)
         self.mediaPlayer2.setVideoOutput(self.videoWidget2)
-
         self.mediaPlayer1.stateChanged.connect(self.mediaStateChange1)
         self.mediaPlayer1.positionChanged.connect(self.positionChanged1)
         self.mediaPlayer1.durationChanged.connect(self.durationChanged1)
-
         self.ui.pushButton_5.clicked.connect(self.playVideo2)
         
-    
+
         self.mediaPlayer2.stateChanged.connect(self.mediaStateChange2)
         self.mediaPlayer2.positionChanged.connect(self.positionChanged2)
         self.mediaPlayer2.durationChanged.connect(self.durationChanged2)
 
         self.videoCombo.currentTextChanged.connect(self.comboBoxChanged)
 
-        self.InitializeCamera()
-        self.InitializeCamera()
+        self.InitializeCamera(0, True) # TODO: Switch to false for prod
+        self.InitializeCamera(1, True)
 
         #self.threadBtn1.clicked.connect(self.InitializeCamera)
         #self.threadBtn2.clicked.connect(self.InitializeCamera)
@@ -218,36 +192,52 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.pushButton_5.setText(_translate("MainWindow", "Play"))
         self.ui.label_3.setText(_translate("MainWindow", ""))
         self.ui.label_4.setText(_translate("MainWindow", ""))
-        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.RecordTab), _translate("MainWindow", "Camera Feeds"))
-        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_2), _translate("MainWindow", "Media Players"))
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.RecordTab), _translate("MainWindow", "Slicing"))
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_2), _translate("MainWindow", "Grid Management"))
         self.gridBtn.setText(_translate("MainWindow", "Grid Management"))
+        self.ui.label_2.setText(_translate("MainWindow", "External Camera Feed"))
+        self.ui.label.setText(_translate("MainWindow", "Microtome Camera Feed"))
+        self.clearConsoleBtn.setText(_translate("MainWindow", "Clear"))
+        self.outputConsoleBtn.setText(_translate("MainWindow", "Write to File"))
+
         #self.threadBtn1.setText(_translate("MainWindow", "Show Mighty Micros Camera"))
         #self.threadBtn2.setText(_translate("MainWindow", "Show Microtome Camera"))
 
         # endregion
-        
-     
-   
-    # region [ Methods ]
-    # def startVideoThreads(self):
-    #     # Manage unique integers for threads
-    #     indices = [0, 1]
 
-    #     for index in indices: 
-    #         videoThread1 = VideoThread(index)
 
-    #         if index == 0: 
+        # region [ Aesthetics ]
 
-    #             videoThread1.frameSignal.connect(self.ImageUpdateSlot1)
-    #             videoThread1.start()
-    #             self.videoThreads.append(videoThread1)
+        font = QtGui.QFont()
+        font.setPointSize(30)
+        font.setBold(True)
+        font.setUnderline(False)
+        font.setWeight(75)
+        self.ui.label.setFont(font)
+        self.ui.label_2.setFont(font)
+        self.ui.ConTitle.setFont(font)
+        self.ui.ConTitle_2.setFont(font)
 
-    #         elif index == 1: 
-    #             videoThread1.frameSignal.connect(self.ImageUpdateSlot2)
-    #             videoThread1.start()
-    #             self.videoThreads.append(videoThread1)
+        font2 = QtGui.QFont()
+        font2.setPointSize(18)
+        font2.setWeight(50)
+        font2.setBold(False)
+        font2.setUnderline(False)
 
-    def InitializeCamera(self):
+        self.ui.pushButton.setFont(font2)
+        self.ui.pushButton_2.setFont(font2)
+        self.ui.pushButton_5.setFont(font2)
+        self.gridBtn.setFont(font2)
+        self.clearConsoleBtn.setFont(font2)
+        self.outputConsoleBtn.setFont(font2)
+
+        self.output1.setFont(font2)
+        self.output2.setFont(font2)
+
+
+        # endregion
+
+    def InitializeCamera(self, camera_index: int, do_detections=True):
         # Manage unique integers for threads
         
         
@@ -262,7 +252,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         
         logger.info(f"Initializing Camera {(self.camera_index, self.temp_data[self.camera_index])}")
-        camera_thread = VideoThread((self.camera_index, self.temp_data[self.camera_index]), self.save_path)
+        camera_thread = VideoThread((self.camera_index, self.temp_data[self.camera_index]), self.save_path, do_detections=do_detections)
         
         camera_thread.camera_failed_signal.connect(camera_thread.stop)
         camera_thread.frame_signal.connect(lambda image, idx=self.camera_index: self.UpdatePixmap(image, idx))
@@ -272,6 +262,9 @@ class MightyMicros(QtWidgets.QMainWindow):
                 
         self.camera_index += 1
         self.video_threads.append(camera_thread)
+
+
+        
     
     def UpdatePixmap(self, Image: QtGui.QImage, camera_index: int):
         if isinstance(camera_index, int) == False:
@@ -284,19 +277,29 @@ class MightyMicros(QtWidgets.QMainWindow):
 
     def ClickBTN(self):
         if self.isRecord == False:
+            
+            
             self.ui.pushButton.setText("Stop Recording")  
             self.timer.start() #start the timer
             for idx, camera_thread in enumerate(self.video_threads, start=1):
                 camera_thread.start_recording(self.videoNumber)
             self.isRecord = True
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Started")
+            self.output2.append("\nRecording Video "+str(self.videoNumber)+" Started")
+            
         else:
+            
             self.ui.pushButton.setText("Start Recording")
             self.timer.stop()
             [camera_thread.stop_recording() for camera_thread in self.video_threads]
             self.isRecord = False
             self.output1.append("\nRecording Video "+str(self.videoNumber)+" Stopped")
+            self.output2.append("\nRecording Video "+str(self.videoNumber)+" Started")
             self.videoCombo.addItem("Recording Session " + str(self.videoNumber))
+            
+            
+
+            
             self.videoNumber += 1
 
     def update_console(self, text: str):
@@ -359,20 +362,39 @@ class MightyMicros(QtWidgets.QMainWindow):
         for i in cb_value: 
             if i.isdigit():
                 num += i
-
-        self.mediaPlayer1.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(os.path.join(self.save_path, f'video_recording_0_{num}.mp4'))))
-        self.mediaPlayer2.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(os.path.join(self.save_path, f'video_recording_1_{num}.mp4'))))
+        logger.info(f"Loading video {num}")
+        logger.info(str(Path(self.save_path, f'video_recording_0_{num}.mp4')))
+        self.mediaPlayer1.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(str(Path(self.save_path, f'video_recording_0_{num}.mp4')))))
+        self.mediaPlayer2.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile(str(Path(self.save_path, f'video_recording_1_{num}.mp4')))))
 
         self.ui.pushButton_2.setEnabled(True)
         self.ui.pushButton_5.setEnabled(True)
 
+        #text = open(os.path.join(self.save_path, f'console_output_{str(self.videoNumber)}.txt'), "r").read()
+        #self.output2.append(text)
+
     def gridPopUp(self):
+
+        self.gridManager = GridManagerPopUp(self.output2, self.output1, '3, 4, 5', self)
  
-        if self.popUp.isVisible():
-            self.popUp.hide()
+        if self.gridManager.isVisible():
+            self.gridManager.hide()
 
         else:
-            self.popUp.show()
+            self.gridManager.show()
+
+    def clickClear(self): 
+        self.output1.clear() 
+        self.output2.clear() 
+
+    def clickWrite(self):
+        text = self.output1.toPlainText() 
+
+        with open(os.path.join(self.save_path, f'console_output_{self.textFileNum}.txt'), 'w') as file:
+            file.write(text)
+
+        self.textFileNum += 1
+
 
     
     def closeEvent(self, event: QtGui.QCloseEvent):
@@ -390,17 +412,19 @@ class MightyMicros(QtWidgets.QMainWindow):
         # Pass the event back to the normal handler to close the window.
         super().closeEvent(event)
         
-    # endregion
 
 #class for grid management pop up window 
-class PopUpWindow(QtWidgets.QWidget):
+class GridManagerPopUp(QtWidgets.QWidget):
    
-    def __init__(self, output2: QtWidgets.QTextEdit, parent = None):
+    def __init__(self, output2: QtWidgets.QTextEdit, output1: QtWidgets.QTextEdit, missSlices: str, parent = None):
         super().__init__()
         self.output2 = output2
+        self.output1 = output1
         self.gridNum = 0
 
+        self.setWindowTitle('Grid Manager')
 
+        self.missSlices = missSlices #the slices that got picked up on the grid (slices that went missing from model's detection database)
         
 
         # region [Add Widgets]
@@ -459,8 +483,7 @@ class PopUpWindow(QtWidgets.QWidget):
         self.yesBtn.setText("Yes")
         self.noBtn.setText("No")
         self.okBtn2.setText("Ok")
-        self.typeSlicesLabel.setText("Type the numbers of the slices that were picked up on grid " + str(self.gridNum) + " separated by a comma (ex: 3, 4, 5).")
-
+        
         # endregion
 
         # region [ Signals ]
@@ -472,27 +495,75 @@ class PopUpWindow(QtWidgets.QWidget):
         
         # endregion
 
+        # region [ Aesthetics ]
+        font = QtGui.QFont()
+        font.setPointSize(18)
+        font.setWeight(50)
+        font.setBold(False)
+        font.setUnderline(False)
+
+        self.labelGrid.setFont(font)
+        self.gridSpinBox.setFont(font)
+        self.okBtn.setFont(font)
+        self.missSlicesLabel.setFont(font)
+        self.yesBtn.setFont(font)
+        self.noBtn.setFont(font)
+        self.typeSlicesLabel.setFont(font)
+        self.typeSlicesLineEdit.setFont(font)
+        self.okBtn2.setFont(font)
+
+
+
+        # endregion
+
     def clickOk(self):
         self.gridNum = self.gridSpinBox.value()
-
-        self.missSlicesLabel.setText("The following slices seem to be the slices picked up on the grid: 3, 4, 5. Is this correct?")
+        
+        #self.typeSlicesLabel.show() 
+        #self.typeSlicesLineEdit.show()
+        self.missSlicesLabel.setText("The following slices seem to be the slices picked up on the grid: " + self.missSlices + ". Is this correct?")
         self.yesBtn.show()
         self.noBtn.show()
+        #self.okBtn2.show()
+
+        
 
 
     def clickYes(self): 
+        self.output1.append("Slices 3, 4, and 5 picked up on Grid " + str(self.gridNum))
         self.output2.append("Slices 3, 4, and 5 picked up on Grid " + str(self.gridNum))
+
+        
         self.close()
 
     def clickNo(self): 
+        self.typeSlicesLabel.setText("Type the numbers of the slices that were picked up on grid " + str(self.gridNum) + " separated by a comma (ex: 3, 4, 5).")
         self.typeSlicesLabel.show()
         self.typeSlicesLineEdit.show()
         self.okBtn2.show()
 
     def clickOk2(self): 
         self.sliceNums = self.typeSlicesLineEdit.text()
+        self.output1.append("Slices " + str(self.sliceNums) + " picked up on Grid " + str(self.gridNum))
         self.output2.append("Slices " + str(self.sliceNums) + " picked up on Grid " + str(self.gridNum))
         self.close()
+
+
+#class for pop up to ask for filepath 
+# class AskFilePathPopUp(QtWidgets.QWidget):
+#     def __init__(self): 
+#         super().__init__()
+#         self.setWindowTitle('Set Filepath')
+
+#         vlayout = QtWidgets.QVBoxLayout()
+
+#         self.askFilePathLabel = QtWidgets.QLabel()
+#         self.askFilePathLabel.setText('Type a filepath to save recordings/files to:')
+#         vlayout.addWidget(self.askFilePathLabel)
+
+
+        
+    
         
 
 
