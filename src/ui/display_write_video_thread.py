@@ -39,16 +39,18 @@ def my_tracer(frame, event, arg = None):
 class VideoThread(QThread):
     frame_signal = pyqtSignal(QImage)
     camera_failed_signal = pyqtSignal(int)
+    console_signal = pyqtSignal(str)
     
-    def __init__(self, camera_index: int, parent=None):
+    def __init__(self, camera_index: int, save_path: str, parent=None):
         super().__init__()
         self.camera = cv2.VideoCapture(camera_index[1])
         self.camera_index = camera_index[0]
         self.model = Model()
-        self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
+        self.save_path = save_path
         self.thread_active = True
         self.video_writer = None
         self.is_recording = False
+        self.valid_ids = []
         self.setObjectName(f"VideoThread_{camera_index}")
         logger.info(f'VideoThread initialized with camera index {self.camera_index}')
     
@@ -58,8 +60,11 @@ class VideoThread(QThread):
             success, frame = self.camera.read()
             if success:
                 frame = cv2.resize(frame, (640, 480))
-                # annotated_frame = self.model.predict(frame)[0].plot(labels=False, masks=False)
                 annotated_frame = self.model.predict(frame)
+                for detection in self.model.manager.detections.values():
+                    if detection.id not in self.valid_ids:
+                        self.console_signal.emit(f"Camera {self.camera_index} | Slice Found: {detection.id}")
+                        self.valid_ids.append(detection.id)
                 
                 if self.is_recording:
                     try:

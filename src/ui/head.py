@@ -262,10 +262,11 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         
         logger.info(f"Initializing Camera {(self.camera_index, self.temp_data[self.camera_index])}")
-        camera_thread = VideoThread((self.camera_index, self.temp_data[self.camera_index]))
+        camera_thread = VideoThread((self.camera_index, self.temp_data[self.camera_index]), self.save_path)
         
         camera_thread.camera_failed_signal.connect(camera_thread.stop)
         camera_thread.frame_signal.connect(lambda image, idx=self.camera_index: self.UpdatePixmap(image, idx))
+        camera_thread.console_signal.connect(self.update_console)
         
         camera_thread.start()
                 
@@ -298,6 +299,10 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.videoCombo.addItem("Recording Session " + str(self.videoNumber))
             self.videoNumber += 1
 
+    def update_console(self, text: str):
+        self.output1.append(text)
+        # Set output2's text to be the same as output1's
+        self.output2.setText(self.output1.toPlainText())
 
     #function to change button text 
     def mediaStateChange1(self, state): 
