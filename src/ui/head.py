@@ -42,7 +42,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         #self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
         self.textFileNum = 1
         # self.temp_data = ['data/demo video ui - side angle video slicing.mp4', 'data/demo video ui - microtome camera slicing.mp4']
-        self.temp_data = ['data/output_2.mp4', 'data/output.mp4']
+        # self.temp_data = ['data/output_2.mp4', 'data/output.mp4']
 
         # Change/add any property about ui here
         self.videoNumber = 1
@@ -179,7 +179,7 @@ class MightyMicros(QtWidgets.QMainWindow):
 
         self.videoCombo.currentTextChanged.connect(self.comboBoxChanged)
 
-        self.InitializeCamera(0, True) # TODO: Switch to false for prod
+        self.InitializeCamera(0, False) # TODO: Switch to false for prod
         self.InitializeCamera(1, True)
 
         #self.threadBtn1.clicked.connect(self.InitializeCamera)
@@ -251,8 +251,9 @@ class MightyMicros(QtWidgets.QMainWindow):
             self.camera_index = 0
         
         
-        logger.info(f"Initializing Camera {(self.camera_index, self.temp_data[self.camera_index])}")
-        camera_thread = VideoThread((self.camera_index, self.temp_data[self.camera_index]), self.save_path, do_detections=do_detections)
+        # logger.info(f"Initializing Camera {(self.camera_index, self.temp_data[self.camera_index])}")
+        logger.info(f"Initializing Camera {self.camera_index}")
+        camera_thread = VideoThread(self.camera_index, self.save_path, do_detections=do_detections)
         
         camera_thread.camera_failed_signal.connect(camera_thread.stop)
         camera_thread.frame_signal.connect(lambda image, idx=self.camera_index: self.UpdatePixmap(image, idx))
