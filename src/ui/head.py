@@ -37,7 +37,10 @@ class MightyMicros(QtWidgets.QMainWindow):
 
         self.video_threads = []
         self.camera_index = 0
-        self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
+
+        self.save_path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select Folder to Save Files')
+        print(self.save_path)
+        #self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
         self.textFileNum = 1
         #self.temp_data = ['data/20231017_120545.mp4', 'data/20231017_122937.mp4']
 
@@ -48,6 +51,11 @@ class MightyMicros(QtWidgets.QMainWindow):
         self.ui.frame_5.setMinimumSize(QtCore.QSize(440, 330))
         self.numSlices = 1
         self.isRecord = False
+
+
+        
+        
+
 
 
         
@@ -328,7 +336,7 @@ class MightyMicros(QtWidgets.QMainWindow):
         
         
         logger.info(f"Initializing Camera {self.camera_index}")
-        camera_thread = VideoThread(self.camera_index, self.output1, self.output2)
+        camera_thread = VideoThread(self.camera_index, self.output1, self.output2, self.save_path)
         
         camera_thread.camera_failed_signal.connect(camera_thread.stop)
         camera_thread.frame_signal.connect(lambda image, idx=self.camera_index: self.UpdatePixmap(image, idx))
@@ -352,6 +360,7 @@ class MightyMicros(QtWidgets.QMainWindow):
 
     def ClickBTN(self):
         if self.isRecord == False:
+            
             
             self.ui.pushButton.setText("Stop Recording")  
             self.timer.start() #start the timer
@@ -444,13 +453,13 @@ class MightyMicros(QtWidgets.QMainWindow):
 
     def gridPopUp(self):
 
-        self.popUp = PopUpWindow(self.output2, self.output1, self)
+        self.gridManager = GridManagerPopUp(self.output2, self.output1, '3, 4, 5', self)
  
-        if self.popUp.isVisible():
-            self.popUp.hide()
+        if self.gridManager.isVisible():
+            self.gridManager.hide()
 
         else:
-            self.popUp.show()
+            self.gridManager.show()
 
     def clickClear(self): 
         self.output1.clear() 
@@ -484,15 +493,17 @@ class MightyMicros(QtWidgets.QMainWindow):
     # endregion
 
 #class for grid management pop up window 
-class PopUpWindow(QtWidgets.QWidget):
+class GridManagerPopUp(QtWidgets.QWidget):
    
-    def __init__(self, output2: QtWidgets.QTextEdit, output1: QtWidgets.QTextEdit, parent = None):
+    def __init__(self, output2: QtWidgets.QTextEdit, output1: QtWidgets.QTextEdit, missSlices: str, parent = None):
         super().__init__()
         self.output2 = output2
         self.output1 = output1
         self.gridNum = 0
 
+        self.setWindowTitle('Grid Manager')
 
+        self.missSlices = missSlices #the slices that got picked up on the grid (slices that went missing from model's detection database)
         
 
         # region [Add Widgets]
@@ -513,16 +524,16 @@ class PopUpWindow(QtWidgets.QWidget):
         self.okBtn = QtWidgets.QPushButton()
         vlayout.addWidget(self.okBtn)
 
-        # self.missSlicesLabel = QtWidgets.QLabel()
-        # vlayout.addWidget(self.missSlicesLabel)
+        self.missSlicesLabel = QtWidgets.QLabel()
+        vlayout.addWidget(self.missSlicesLabel)
 
-        # self.yesBtn = QtWidgets.QPushButton()
-        # vlayout.addWidget(self.yesBtn)
-        # self.yesBtn.hide()
+        self.yesBtn = QtWidgets.QPushButton()
+        vlayout.addWidget(self.yesBtn)
+        self.yesBtn.hide()
 
-        # self.noBtn = QtWidgets.QPushButton()
-        # vlayout.addWidget(self.noBtn)
-        # self.noBtn.hide()
+        self.noBtn = QtWidgets.QPushButton()
+        vlayout.addWidget(self.noBtn)
+        self.noBtn.hide()
 
         self.typeSlicesLabel = QtWidgets.QLabel()
         vlayout.addWidget(self.typeSlicesLabel)
@@ -548,49 +559,90 @@ class PopUpWindow(QtWidgets.QWidget):
         # region [ Set Text ]
         self.labelGrid.setText("Enter grid number:")
         self.okBtn.setText("Ok")
-        #self.yesBtn.setText("Yes")
-        #self.noBtn.setText("No")
+        self.yesBtn.setText("Yes")
+        self.noBtn.setText("No")
         self.okBtn2.setText("Ok")
         
         # endregion
 
         # region [ Signals ]
         self.okBtn.clicked.connect(self.clickOk)
-        #self.yesBtn.clicked.connect(self.clickYes)
-        #self.noBtn.clicked.connect(self.clickNo)
+        self.yesBtn.clicked.connect(self.clickYes)
+        self.noBtn.clicked.connect(self.clickNo)
         self.okBtn2.clicked.connect(self.clickOk2)
         
         
         # endregion
 
+        # region [ Aesthetics ]
+        font = QtGui.QFont()
+        font.setPointSize(18)
+        font.setWeight(50)
+        font.setBold(False)
+        font.setUnderline(False)
+
+        self.labelGrid.setFont(font)
+        self.gridSpinBox.setFont(font)
+        self.okBtn.setFont(font)
+        self.missSlicesLabel.setFont(font)
+        self.yesBtn.setFont(font)
+        self.noBtn.setFont(font)
+        self.typeSlicesLabel.setFont(font)
+        self.typeSlicesLineEdit.setFont(font)
+        self.okBtn2.setFont(font)
+
+
+
+        # endregion
+
     def clickOk(self):
         self.gridNum = self.gridSpinBox.value()
-        self.typeSlicesLabel.setText("Type the numbers of the slices that were picked up on grid " + str(self.gridNum) + " separated by a comma (ex: 3, 4, 5).")
+        
+        #self.typeSlicesLabel.show() 
+        #self.typeSlicesLineEdit.show()
+        self.missSlicesLabel.setText("The following slices seem to be the slices picked up on the grid: " + self.missSlices + ". Is this correct?")
+        self.yesBtn.show()
+        self.noBtn.show()
+        #self.okBtn2.show()
 
-        self.typeSlicesLabel.show() 
+        
+
+
+    def clickYes(self): 
+        self.output1.append("Slices 3, 4, and 5 picked up on Grid " + str(self.gridNum))
+        self.output2.append("Slices 3, 4, and 5 picked up on Grid " + str(self.gridNum))
+
+        
+        self.close()
+
+    def clickNo(self): 
+        self.typeSlicesLabel.setText("Type the numbers of the slices that were picked up on grid " + str(self.gridNum) + " separated by a comma (ex: 3, 4, 5).")
+        self.typeSlicesLabel.show()
         self.typeSlicesLineEdit.show()
         self.okBtn2.show()
-
-        #self.missSlicesLabel.setText("The following slices seem to be the slices picked up on the grid: 3, 4, 5. Is this correct?")
-        #self.yesBtn.show()
-        #self.noBtn.show()
-
-
-    # def clickYes(self): 
-    #     self.output1.append("Slices 3, 4, and 5 picked up on Grid " + str(self.gridNum))
-    #     self.output2.append("Slices 3, 4, and 5 picked up on Grid " + str(self.gridNum))
-    #     self.close()
-
-    # def clickNo(self): 
-    #     self.typeSlicesLabel.show()
-    #     self.typeSlicesLineEdit.show()
-    #     self.okBtn2.show()
 
     def clickOk2(self): 
         self.sliceNums = self.typeSlicesLineEdit.text()
         self.output1.append("Slices " + str(self.sliceNums) + " picked up on Grid " + str(self.gridNum))
         self.output2.append("Slices " + str(self.sliceNums) + " picked up on Grid " + str(self.gridNum))
         self.close()
+
+
+#class for pop up to ask for filepath 
+# class AskFilePathPopUp(QtWidgets.QWidget):
+#     def __init__(self): 
+#         super().__init__()
+#         self.setWindowTitle('Set Filepath')
+
+#         vlayout = QtWidgets.QVBoxLayout()
+
+#         self.askFilePathLabel = QtWidgets.QLabel()
+#         self.askFilePathLabel.setText('Type a filepath to save recordings/files to:')
+#         vlayout.addWidget(self.askFilePathLabel)
+
+
+        
+    
         
 
 
