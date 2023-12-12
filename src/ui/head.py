@@ -11,7 +11,6 @@ import cv2
 from src.ui.main_ui import Ui_MainWindow
 from src.ui.display_write_video_thread import VideoThread
 from src import PROJECT_ROOT
-from src.pipeline.detection import Model
 
 import logging
 
@@ -29,7 +28,6 @@ logger = logging.getLogger('YOLO_Detection')
 
 class MightyMicros(QtWidgets.QMainWindow):
 
-    
     def __init__(self):
         super().__init__()
         self.ui = Ui_MainWindow()

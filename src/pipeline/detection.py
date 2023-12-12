@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Union
-from ultralytics.engine.results import Boxes
+import torch
+from ultralytics.engine.results import Boxes, Results
 from math import atan2, hypot
 import cv2
 from torch import equal as tensor_equal
@@ -14,6 +15,7 @@ EPS = 1e-2 # Epsilon value for matplotlib scale wiggling
 EPS2 = 1e-5 # Epsilon value for numpy.isclose()
 MIN_AREAS = 800 # Lower bound of scales
 MAX_AREAS = 30000 # Upper bound of scales
+COORDINATES = 9 # Amount of coordinates in a bounding box + score
 
 def calculate_vector(start: tuple, end: tuple) -> tuple:
     x_1, y_1 = start[:2]
@@ -44,11 +46,11 @@ def get_direction(angle: float) -> str:
 @dataclass
 class Detection:
     id: int
-    bbox: np.ndarray
-    bbox_norm: np.ndarray
-    xywh: np.ndarray
-    centroid_norm: np.ndarray
-    score: float
+    bbox: Union[Tensor, np.ndarray]
+    bbox_norm: Union[Tensor, np.ndarray]
+    xywh: Union[Tensor, np.ndarray] = None
+    centroid_norm: Union[Tensor, np.ndarray] = None
+    score: Union[Tensor, float] = None
     kalman_filter: KalmanFilter = None
     neighbors: Dict[str, Optional['Detection']] = field(default_factory=lambda: {
         'N': None, 
@@ -62,6 +64,18 @@ class Detection:
     
     def initialize_kalman(self, delta_t: float):
         self.kalman_filter = KalmanFilter(self.bbox_norm, delta_t)
+    
+    def convert_tensor_to_numpy(self):
+        if isinstance(self.bbox, Tensor):
+            self.bbox = self.bbox.numpy()
+        if isinstance(self.bbox_norm, Tensor):
+            self.bbox_norm = self.bbox_norm.numpy()
+        if isinstance(self.xywh, Tensor):
+            self.xywh = self.xywh.numpy()
+        if isinstance(self.centroid_norm, Tensor):
+            self.centroid_norm = self.centroid_norm.numpy()
+        if isinstance(self.score, Tensor):
+            self.score = self.score.item()
     
     def __eq__(self, __value: object) -> bool:
         
@@ -100,26 +114,47 @@ class DetectionManager:
         self.next_id = 1
         self.delta_t = frame_rate ** -1
         
-    def handle_frame(self, results: Union[Boxes, np.ndarray], frame: np.ndarray) -> np.ndarray:
+    def handle_frame(self, results: Union[Results, np.ndarray], frame: np.ndarray) -> np.ndarray:
+        self.detections = {} # TODO: TEMPORARY
+        self.next_id = 1 # TODO: TEMPORARY
         
-        if isinstance(results, Boxes):
-            # Convert to (x1, y1, x2, y2, x3, y3, x4, y4) format.
-            results = results.xyxy[0]
-            
-        print(results)
         frame_detections = []
-        
-        # Run a prediction on currently managed detections to get estimate locations for this new frame.
         self.predict_detections()
         
-        # Generate detections with -1 id for each bbox in results.
-        for bbox, bbox_norm in zip(results.xyxy, results.xyxyn):
+        # if isinstance(results, Results):
+        #     # Convert to generic format.
+        #     bboxes = self.convert_yolo_to_generic(results)
+        #     for bbox, bbox_norm, xywh, centroid_norm, score in bboxes:
+        #         frame_detections.append(Detection(id=-1, 
+        #                                         bbox=bbox, 
+        #                                         bbox_norm=bbox_norm, 
+        #                                         score=score, 
+        #                                         xywh=xywh,
+        #                                         centroid_norm=centroid_norm))
+        # else:
+        #     bboxes, bbox_norms = self.handle_results(results, (frame.shape[1], frame.shape[0]))
+        #     for i in range(len(bboxes)):
+        #         centroid = results[0][i, 0:2]
+        #         centroid_norm = np.array([centroid[0] / frame.shape[1], centroid[1] / frame.shape[0]])
+        #         frame_detections.append(Detection(id=-1, 
+        #                                         bbox=bboxes[i, 0:8], 
+        #                                         bbox_norm=bbox_norms[i, 0:8], 
+        #                                         score=bboxes[i, 8], 
+        #                                         xywh=results[0][i, 0:4],
+        #                                         centroid_norm=centroid_norm))
+        for bbox, bbox_norm in zip(results.boxes.xyxy, results.boxes.xyxyn):
             frame_detections.append(Detection(-1, bbox, bbox_norm))
+            
+        
+        
+        # Run a prediction on currently managed detections to get estimate locations for this new frame.
+        
+        
+        # Generate detections with -1 id for each bbox in results.
+
         
         for new_detection in frame_detections:
             self.process_detection(new_detection)
-        
-        
         
         self.generate_neighbors(self.detections.values())
         
@@ -131,7 +166,17 @@ class DetectionManager:
         thickness = 2
         font_scale = 0.5
 
-        frame = self.draw_bboxes(frame, color=(125, 43, 250), thickness=thickness, font_size=font_scale)
+        # frame = self.draw_bboxes(frame, color=(125, 43, 250), thickness=thickness, font_size=font_scale)
+        # Use cv2 to draw the bounding boxes
+        for detection in self.detections.values():
+            bbox = detection.bbox
+            x1, y1, x2, y2 = [int(coord) for coord in bbox]
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color=green, thickness=thickness)  # Draw bbox
+            
+            # # Draw the id
+            # centroid = detection.kalman_filter.calculate_centroid(detection.bbox_norm)
+            # centroid = centroid.astype(np.int32)
+            # cv2.putText(frame, str(detection.id), (centroid[0], centroid[1]), cv2.FONT_HERSHEY_SIMPLEX, font_scale, blue, thickness)
         
         # Frame updated with bboxs that have id's overlayed (inside the bbox).
         return frame
@@ -194,6 +239,105 @@ class DetectionManager:
             if detection.kalman_filter is not None:
                 detection.kalman_filter.predict()
     
+    def convert_yolo_to_generic(self, yolo_results: Results):
+        boxes_obj = yolo_results.boxes  # Extract the Boxes object
+        xywh = boxes_obj.xywh  # Bounding boxes (center_x, center_y, width, height)
+        xywhn = boxes_obj.xywhn  # Normalized bounding boxes
+        xyxy = boxes_obj.xyxy  # Bounding boxes (x1, y1, x2, y2)
+        xyxyn = boxes_obj.xyxyn  # Normalized bounding boxes (x1, y1, x2, y2)
+        conf = boxes_obj.conf  # Confidence scores
+        orig_shape = boxes_obj.orig_shape  # Original shape of the image
+
+        # Image dimensions
+        image_height, image_width = orig_shape
+
+        # Conversion
+        converted_boxes = []
+        for i in range(len(conf)):
+            # Extract the bounding box and score
+            box = xywh[i]
+            score = conf[i]  # Keep it as a tensor
+            
+            # Convert to bbox (tensor operations)
+            top_left = box[:2] - box[2:] / 2
+            bottom_right = box[:2] + box[2:] / 2
+            bbox = torch.cat((top_left, bottom_right), dim=0)
+            
+            # Convert to bbox_normalized (tensor operations)
+            scale = torch.tensor([image_width, image_height, image_width, image_height], dtype=torch.float32)
+            bbox_normalized = bbox / scale
+            
+            # Centroid normalized (tensor operations)
+            centroid_norm = xywhn[i][:2]
+            
+            converted_boxes.append((bbox, bbox_normalized, box, centroid_norm, score))
+
+        return converted_boxes
+
+    def handle_results(self, results, frame_size: tuple) -> tuple:
+        """Convert results from MMCV to a tuple of bounding boxes and labels.
+        
+        This method incorporates modifications based on code from the mmrotate repository (OpenMMLab), 
+        available at [https://github.com/open-mmlab/mmrotate]. mmrotate is distributed under the Apache 2.0 License.
+
+        Args:
+            results: The detection results from inference.
+            frame_size (tuple): The size of the frame (width, height).
+
+        Returns:
+            Tuple: A tuple containing two lists - the first with un-normalized bounding boxes, 
+                and the second with normalized bounding boxes.
+        """
+        if isinstance(results, tuple):
+            bbox_result, segm_result = results
+            if isinstance(segm_result, tuple):
+                segm_result = segm_result[0]
+        else:
+            bbox_result, segmn_result = results, None
+        
+        bboxes = np.vstack(bbox_result)
+        
+        # labels = [
+        #     np.full(bbox.shape[0], i, dtype=np.int32)
+        #     for i, bbox in enumerate(bbox_result)
+        # ]
+        # labels = np.concatenate(labels)
+        
+        # Normalize bounding boxes
+        img_width, img_height = frame_size
+        bboxes_coordinates = np.zeros((bboxes.shape[0], COORDINATES), dtype=np.float32)
+        for i, bbox in enumerate(bboxes):
+            x_center, y_center, width, height, rotation = bbox[:5]
+            half_width_x, half_width_y = width / 2 * np.cos(rotation), width / 2 * np.sin(rotation)
+            half_height_x, half_height_y = -height / 2 * np.sin(rotation), height / 2 * np.cos(rotation)
+            
+            p1 = (x_center - half_width_x - half_height_x, y_center - half_width_y - half_height_y)
+            p2 = (x_center + half_width_x - half_height_x, y_center + half_width_y - half_height_y)
+            p3 = (x_center + half_width_x + half_height_x, y_center + half_width_y + half_height_y)
+            p4 = (x_center - half_width_x + half_height_x, y_center - half_width_y + half_height_y)
+            
+            bboxes_coordinates[i, 0] = p1[0]  # x1
+            bboxes_coordinates[i, 1] = p1[1]  # y1
+            bboxes_coordinates[i, 2] = p2[0]  # x2
+            bboxes_coordinates[i, 3] = p2[1]  # y2
+            bboxes_coordinates[i, 4] = p3[0]  # x3
+            bboxes_coordinates[i, 5] = p3[1]  # y3
+            bboxes_coordinates[i, 6] = p4[0]  # x4
+            bboxes_coordinates[i, 7] = p4[1]  # y4     
+                 
+            # Copy over score
+            bboxes_coordinates[i, 8] = bbox[5]
+            
+        
+        normalized_bboxes = np.zeros_like(bboxes_coordinates, dtype=np.float32)
+        normalized_bboxes[:, [0, 2, 4, 6]] = bboxes_coordinates[:, [0, 2, 4, 6]] / img_width
+        normalized_bboxes[:, [1, 3, 5, 7]] = bboxes_coordinates[:, [1, 3, 5, 7]] / img_height
+
+        # Copy over score
+        normalized_bboxes[:, 8] = bboxes_coordinates[:, 8]
+        
+
+        return (bboxes_coordinates, normalized_bboxes)
 
     def draw_bboxes(self, frame: np.ndarray, color=(0,255,0), thickness=2, alpha=0.5, font_size=13) -> np.ndarray:
         width, height = frame.shape[1], frame.shape[0]
@@ -210,6 +354,7 @@ class DetectionManager:
         areas_list = []
 
         for detection in self.detections.values():
+            detection.convert_tensor_to_numpy()
             bbox = detection.bbox.astype(np.int32).reshape((-1, 1, 2))
             cv2.polylines(frame, [bbox], isClosed=True, color=color, thickness=thickness)
 

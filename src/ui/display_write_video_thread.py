@@ -42,8 +42,8 @@ class VideoThread(QThread):
     
     def __init__(self, camera_index: int, parent=None):
         super().__init__()
-        self.camera = cv2.VideoCapture(camera_index)
-        self.camera_index = camera_index
+        self.camera = cv2.VideoCapture(camera_index[1])
+        self.camera_index = camera_index[0]
         self.model = Model()
         self.save_path = os.path.join(PROJECT_ROOT, 'recordings')
         self.thread_active = True
