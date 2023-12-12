@@ -1,0 +1,12 @@
+# YOLO dataset configuration
+
+# Paths
+path: training  # root dir
+train: images  # train images (relative to 'path')
+val: images  # validation images (relative to 'path')
+
+# Number of classes
+nc: 1
+
+# Class names
+names: ['slice']

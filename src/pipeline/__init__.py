@@ -1,1 +1,1 @@
-__all__ = ["detection"]
+__all__ = ["detection", "model"]

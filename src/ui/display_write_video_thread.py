@@ -5,58 +5,118 @@ from PyQt5.QtCore import *
 from PyQt5.QtMultimediaWidgets import *
 from PyQt5.QtMultimedia import *
 import cv2
+import numpy as np
+from sys import settrace, stdout, stderr
 
-from src.pipeline.detection import Model
 from src import PROJECT_ROOT
+from src.pipeline.model import Model
+# from src.entry import StreamToLogger
 
 
-#class for a thread to display video and write video to a file 
-class Thread1(QThread):
-    ImageUpdate = pyqtSignal(QImage)
+import logging
 
-    def __init__(self, cameraNumber: int, parent = None):
-        super(Thread1, self).__init__(parent)
-        self.cameraNumber = cameraNumber
-        self.ThreadActive = True #- see if commenting this out works
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('YOLO_Detection')
 
+
+REC_FPS = 30 # FPS for recording videos
+
+def my_tracer(frame, event, arg = None): 
+    # extracts frame code 
+    code = frame.f_code 
+  
+    # extracts calling function name 
+    func_name = code.co_name 
+  
+    # extracts the line number 
+    line_no = frame.f_lineno 
+  
+    print(f"A {event} encountered in {func_name}() at line number {line_no} ") 
+  
+    return my_tracer
+
+
+
+
+
+class VideoThread(QThread):
+    frame_signal = pyqtSignal(QImage)
+    camera_failed_signal = pyqtSignal(int)
+    console_signal = pyqtSignal(str)
+    
+    def __init__(self, camera_index: int, save_path: str, do_detections=True, parent=None):
+        super().__init__()
+        self.camera = cv2.VideoCapture(camera_index)
+        self.camera_index = camera_index
+        self.model = Model()
+        self.save_path = save_path
+        self.thread_active = True
+        self.video_writer = None
+        self.is_recording = False
+        self.do_detections = do_detections
+        self.valid_ids = []
+        self.setObjectName(f"VideoThread_{camera_index}")
+        logger.info(f'VideoThread initialized with camera index {self.camera_index}')
+    
     def run(self):
-        Capture = cv2.VideoCapture(0) #get video feed
-        
-        # This is used over just a string for OS interoperability
-        weights_path = os.path.join(PROJECT_ROOT, 'pipeline', 'runs', 'detect', 'train3', 'weights', 'best.pt')
-
-        self.model = Model(weights_path)
-        self.Fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        self.Output = cv2.VideoWriter('video_recording'+str(self.cameraNumber)+'.mp4', self.Fourcc, 20, (640, 480))
-
-        #self.Capture = cv2.VideoCapture(0)
-
-        while self.ThreadActive: 
-            ret, frame = Capture.read() #get frame from video feed
-            if ret: 
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #get color image from feed
-                frame = cv2.resize(frame, (640, 480))
-                
-        
-                results = self.model.predict(frame)
-                
-                annotated_frame = results[0].plot(labels=False, masks=False)
+        logging.info(f'VideoThread running')
+        while self.thread_active:
 
             
+            success, frame = self.camera.read()
+            if success:
+                frame = cv2.resize(frame, (640, 480))
+                if self.do_detections:
+                    annotated_frame = self.model.predict(frame)
+                    for detection in self.model.manager.detections.values(): 
+                        if detection.id not in self.valid_ids:
+                            self.console_signal.emit(f"Slice Found: {detection.id}")
+                            self.valid_ids.append(detection.id)
+                else:
+                    annotated_frame = frame
                 
-                #FlippedImage = cv2.flip(Image, 1) #flip video on vertical axis 
-                qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
-                #qt_frame = QImage(frame.data, frame.shape[1], frame.shape[0], QImage.Format.Format_RGB888) #convert to a format that qt can read 
-                
-                qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio) #scale the image 
-                self.ImageUpdate.emit(qt_frame) #emit the thread: send to main window 
-
-                if self.ThreadActive: 
-                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-                    self.Output.write(frame)
-
+                if self.is_recording:
+                    try:
+                        self.video_writer.write(annotated_frame)
+                    except Exception as e:
+                        logger.info(f'Error writing frame to video file: {e}')
+                        self.stop_recording()
+                        
+                annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
+                qt_frame = QImage(annotated_frame.data, annotated_frame.shape[1], annotated_frame.shape[0], QImage.Format.Format_RGB888)
+                qt_frame = qt_frame.scaled(640, 480, Qt.AspectRatioMode.KeepAspectRatio)
+                self.frame_signal.emit(qt_frame)
+            
+            # This was an attempt to fix the camera freezing midway through issue
+            if self.camera.isOpened() == False:
+                self.camera.release()
+                logger.info(f'released camera {self.camera_index}')
+                self.camera_failed_signal.emit(self.camera_index)
+    
+    
+    
+    def start_recording(self, video_number: int):
+        logger.info(f"Camera {self.camera_index} starting recording")
+        if not self.is_recording:
+            self.video_writer = cv2.VideoWriter(os.path.join(self.save_path, f'video_recording_{self.camera_index}_{video_number}.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), REC_FPS, (640, 480))
+            logger.info(f"Video Writer Initialized: {self.video_writer}")
+            self.is_recording = True
+            
+    def stop_recording(self):
+        logger.info(f"Camera {self.camera_index} stopping recording")
+        if self.is_recording:
+            logger.info("Video Writer Released")
+            self.is_recording = False
+            self.video_writer.release()
+            self.video_writer = None
+    
     def stop(self):
-        self.ThreadActive = False
-        self.Output.release()
+        self.thread_active = False
+        self.camera.release()
+        try:
+            self.video_writer.release()
+        except Exception as e:
+            pass
         self.quit()
-        
+        self.wait()
